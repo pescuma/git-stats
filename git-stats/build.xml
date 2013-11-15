@@ -1,0 +1,8 @@
+<project name="git-stats" default="all">
+
+	<property name="project" value="git-stats" />
+
+	<import file="ivy.xml" />
+	<import file="project.xml" />
+
+</project>

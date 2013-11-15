@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ivy-module version="2.0" xmlns:e="http://ant.apache.org/ivy/extra">
+	<info organisation="org.pescuma" module="git-stats" />
+
+	<configurations defaultconfmapping="compile->default,sources;runtime->default">
+		<conf name="compile" />
+		<conf name="runtime" />
+	</configurations>
+
+	<publications>
+		<artifact name="git-stats" type="jar" />
+		<artifact name="git-stats" type="pom" />
+		<artifact name="git-stats" type="jar" e:classifier="sources" />
+	</publications>
+
+	<dependencies>
+		<dependency org="org.eclipse.jgit" name="org.eclipse.jgit" rev="3.1.0.201310021548-r" />
+
+		<dependency org="junit" name="junit" rev="4.11" conf="compile" />
+	</dependencies>
+</ivy-module>
