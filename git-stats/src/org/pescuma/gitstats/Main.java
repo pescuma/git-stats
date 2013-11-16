@@ -1,5 +1,6 @@
 package org.pescuma.gitstats;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -93,7 +94,7 @@ public class Main {
 		}
 		
 		final Authors authors = new Authors();
-		final Set<RevCommit> commits = new HashSet<RevCommit>();
+		final Set<byte[]> commits = new HashSet<byte[]>();
 		final AtomicInteger unblamable = new AtomicInteger();
 		
 		ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
@@ -125,7 +126,16 @@ public class Main {
 							continue;
 						}
 						
-						commits.add(commit);
+						try {
+							
+							ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+							commit.getId().copyRawTo(buffer);
+							byte[] id = buffer.toByteArray();
+							commits.add(id);
+							
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
 						
 						String line = contents.getString(j);
 						
