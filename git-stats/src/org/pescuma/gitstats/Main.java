@@ -82,7 +82,7 @@ public class Main {
 		while (tree.next()) {
 			String file = tree.getPathString();
 			if (!FilenameToLanguage.isKnownFileType(file)) {
-				System.out.println("Skipping " + file + " ...");
+				// System.out.println("Skipping " + file + " ...");
 				continue;
 			}
 			files.add(file);
@@ -100,7 +100,7 @@ public class Main {
 			final int index = i;
 			final String file = files.get(i);
 			
-			System.out.println(String.format("Processing %d/%d %s ...", index + 1, filesCount, file));
+			System.out.print(String.format("Processing %d/%d ...  ", index + 1, filesCount, file));
 			
 			BlameResult blame;
 			try {
@@ -114,7 +114,7 @@ public class Main {
 			for (int j = 0; j < contents.size(); j++) {
 				RevCommit commit = blame.getSourceCommit(j);
 				if (commit == null) {
-					System.out.println("  Could not blame " + file + " : " + (j + 1));
+					// System.out.println("  Could not blame " + file + " : " + (j + 1));
 					unblamable.incrementAndGet();
 					continue;
 				}
@@ -160,12 +160,15 @@ public class Main {
 			System.out.println("   Unblamable lines : " + unblamable.get());
 	}
 	
+	static long sum;
+	static int count;
+	
 	private static BlameResult blame(Repository repository, String file, RevWalk revWalk, TreeWalk treeWalk)
 			throws GitAPIException {
-		revWalk.release();
 		revWalk.reset();
-		treeWalk.release();
 		treeWalk.reset();
+		
+		long dt = System.nanoTime();
 		
 		BlameGenerator gen = new BlameGenerator(repository, file, revWalk, treeWalk);
 		try {
@@ -179,6 +182,14 @@ public class Main {
 			throw new JGitInternalException(e.getMessage(), e);
 		} finally {
 			gen.dispose();
+			
+			dt = System.nanoTime() - dt;
+			long ms = dt / 1000000;
+			
+			sum += ms;
+			count++;
+			
+			System.out.println("In " + ms + " ms -> avg " + (sum / count) + " ms");
 		}
 	}
 }

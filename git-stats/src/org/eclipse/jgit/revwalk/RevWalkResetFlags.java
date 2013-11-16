@@ -10,6 +10,9 @@ public class RevWalkResetFlags extends RevWalk {
 	
 	@Override
 	protected void reset(int retainFlags) {
+		if (retainFlags == 0)
+			retainFlags = PARSED;
+		
 		super.reset(retainFlags);
 		
 		final int clearFlags = ~retainFlags;
