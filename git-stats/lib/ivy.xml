@@ -14,6 +14,8 @@
 	</publications>
 
 	<dependencies>
+		<dependency org="commons-io" name="commons-io" rev="2.2" />
+		<dependency org="args4j" name="args4j" rev="2.0.26" />
 		<dependency org="org.eclipse.jgit" name="org.eclipse.jgit" rev="3.1.0.201310021548-r" />
 
 		<dependency org="junit" name="junit" rev="4.11" conf="compile" />
