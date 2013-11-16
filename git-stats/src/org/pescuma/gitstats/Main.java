@@ -3,13 +3,18 @@ package org.pescuma.gitstats;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.JGitInternalException;
@@ -29,7 +34,7 @@ import org.kohsuke.args4j.CmdLineParser;
 
 public class Main {
 	
-	public static void main(String[] args) throws IOException, GitAPIException {
+	public static void main(String[] args) throws IOException, GitAPIException, InterruptedException {
 		Args parsedArgs = new Args();
 		CmdLineParser parser = new CmdLineParser(parsedArgs);
 		try {
@@ -63,9 +68,9 @@ public class Main {
 		}
 	}
 	
-	private static void run(Args args) throws IOException, GitAPIException {
+	private static void run(Args args) throws IOException, GitAPIException, InterruptedException {
 		FileRepositoryBuilder builder = new FileRepositoryBuilder();
-		Repository repository = builder //
+		final Repository repository = builder //
 				.readEnvironment() // scan environment GIT_* variables
 				.findGitDir(args.path) // scan up the file system tree
 				.build();
@@ -87,60 +92,74 @@ public class Main {
 			files.add(file);
 		}
 		
-		Set<RevCommit> commits = new HashSet<RevCommit>();
-		Map<String, AuthorData> authors = new HashMap<String, AuthorData>();
-		int unblamable = 0;
+		final Authors authors = new Authors();
+		final Set<RevCommit> commits = new HashSet<RevCommit>();
+		final AtomicInteger unblamable = new AtomicInteger();
 		
-		int filesCount = files.size();
+		ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+		
+		final int filesCount = files.size();
 		for (int i = 0; i < filesCount; i++) {
-			String file = files.get(i);
-			System.out.println(String.format("Processing %d/%d %s ...", i + 1, filesCount, file));
+			final int index = i;
+			final String file = files.get(i);
 			
-			BlameResult blame = blame(repository, file);
-			
-			RawText contents = blame.getResultContents();
-			for (int j = 0; j < contents.size(); j++) {
-				RevCommit commit = blame.getSourceCommit(j);
-				if (commit == null) {
-					System.out.println("  Could not blame line " + (j + 1));
-					unblamable++;
-					continue;
+			exec.submit(new Runnable() {
+				@Override
+				public void run() {
+					System.out.println(String.format("Processing %d/%d %s ...", index + 1, filesCount, file));
+					
+					BlameResult blame;
+					try {
+						blame = blame(repository, file);
+					} catch (GitAPIException e) {
+						e.printStackTrace();
+						return;
+					}
+					
+					RawText contents = blame.getResultContents();
+					for (int j = 0; j < contents.size(); j++) {
+						RevCommit commit = blame.getSourceCommit(j);
+						if (commit == null) {
+							System.out.println("  Could not blame " + file + " : " + (j + 1));
+							unblamable.incrementAndGet();
+							continue;
+						}
+						
+						commits.add(commit);
+						
+						String line = contents.getString(j);
+						
+						String authorName = commit.getAuthorIdent().getName();
+						
+						Author author = authors.get(authorName);
+						
+						if (line.trim().isEmpty())
+							author.incEmptyLines();
+						else
+							author.incTextLines();
+					}
 				}
-				
-				commits.add(head);
-				
-				String line = contents.getString(j);
-				
-				String authorName = commit.getAuthorIdent().getName();
-				
-				AuthorData author = authors.get(authorName);
-				if (author == null) {
-					author = new AuthorData(authorName);
-					authors.put(authorName, author);
-				}
-				
-				if (line.trim().isEmpty())
-					author.emptyLines++;
-				else
-					author.textLines++;
-			}
+			});
 		}
 		
-		List<AuthorData> sortedAuthors = new ArrayList<AuthorData>(authors.values());
-		Collections.sort(sortedAuthors, new Comparator<AuthorData>() {
+		exec.shutdown();
+		exec.awaitTermination(1000, TimeUnit.DAYS);
+		
+		List<Author> sortedAuthors = new ArrayList<Author>(authors.values());
+		Collections.sort(sortedAuthors, new Comparator<Author>() {
 			@Override
-			public int compare(AuthorData o1, AuthorData o2) {
+			public int compare(Author o1, Author o2) {
 				return o2.getTotalLines() - o1.getTotalLines();
 			}
 		});
 		
 		System.out.println();
 		System.out.println("Authors:");
-		for (AuthorData author : sortedAuthors)
+		for (Author author : sortedAuthors)
 			System.out.println(String.format("   %s : %d (%d code, %d empty)", author.name, author.getTotalLines(),
-					author.textLines, author.emptyLines));
-		if (unblamable > 0)
-			System.out.println("   Unblamable lines : " + unblamable);
+					author.getTextLines(), author.getEmptyLines()));
+		if (unblamable.get() > 0)
+			System.out.println("   Unblamable lines : " + unblamable.get());
 	}
 	
 	private static BlameResult blame(Repository repository, String file) throws GitAPIException {
@@ -159,17 +178,52 @@ public class Main {
 		}
 	}
 	
-	private static class AuthorData {
-		final String name;
-		int textLines;
-		int emptyLines;
+	public static class Authors {
+		private final ConcurrentMap<String, Author> authors = new ConcurrentHashMap<String, Author>();
 		
-		AuthorData(String name) {
+		public Author get(String authorName) {
+			Author author = authors.get(authorName);
+			if (author == null) {
+				author = new Author(authorName);
+				Author other = authors.putIfAbsent(authorName, author);
+				if (other != null)
+					author = other;
+			}
+			return author;
+		}
+		
+		public Collection<Author> values() {
+			return authors.values();
+		}
+	}
+	
+	public static class Author {
+		private final String name;
+		private final AtomicInteger textLines = new AtomicInteger();
+		private final AtomicInteger emptyLines = new AtomicInteger();
+		
+		public Author(String name) {
 			this.name = name;
 		}
 		
-		int getTotalLines() {
-			return textLines + emptyLines;
+		public void incTextLines() {
+			textLines.incrementAndGet();
+		}
+		
+		public void incEmptyLines() {
+			emptyLines.incrementAndGet();
+		}
+		
+		public int getTextLines() {
+			return textLines.get();
+		}
+		
+		public int getEmptyLines() {
+			return emptyLines.get();
+		}
+		
+		public int getTotalLines() {
+			return textLines.get() + emptyLines.get();
 		}
 	}
 }
