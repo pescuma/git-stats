@@ -1,15 +1,15 @@
 package org.pescuma.gitstats;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.JGitInternalException;
@@ -89,59 +89,58 @@ public class Main {
 		}
 		
 		final Authors authors = new Authors();
-		final Set<byte[]> commits = new HashSet<byte[]>();
+		// final Set<byte[]> commits = new ConcurrentSkipListSet<byte[]>();
 		final AtomicInteger unblamable = new AtomicInteger();
+		final AtomicInteger current = new AtomicInteger();
+		final int total = files.size();
 		
-		RevWalk revWalk = new RevWalkResetFlags(repository);
-		TreeWalk treeWalk = new TreeWalk(repository);
+		final int threadCount = Runtime.getRuntime().availableProcessors();
 		
-		final int filesCount = files.size();
-		for (int i = 0; i < filesCount; i++) {
-			final int index = i;
-			final String file = files.get(i);
-			
-			System.out.print(String.format("Processing %d/%d ...  ", index + 1, filesCount, file));
-			
-			BlameResult blame;
-			try {
-				blame = blame(repository, file, revWalk, treeWalk);
-			} catch (GitAPIException e) {
-				e.printStackTrace();
-				return;
-			}
-			
-			RawText contents = blame.getResultContents();
-			for (int j = 0; j < contents.size(); j++) {
-				RevCommit commit = blame.getSourceCommit(j);
-				if (commit == null) {
-					// System.out.println("  Could not blame " + file + " : " + (j + 1));
-					unblamable.incrementAndGet();
-					continue;
+		final ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<String>(files);
+		
+		Thread[] threads = new Thread[threadCount];
+		for (int i = 0; i < threads.length; i++) {
+			threads[i] = new Thread() {
+				@Override
+				public void run() {
+					computeAuthors(repository, new Iterable<String>() {
+						@Override
+						public Iterator<String> iterator() {
+							return new Iterator<String>() {
+								String next;
+								
+								@Override
+								public boolean hasNext() {
+									if (next == null)
+										next = queue.poll();
+									
+									return next != null;
+								}
+								
+								@Override
+								public String next() {
+									try {
+										return next;
+									} finally {
+										next = null;
+									}
+								}
+								
+								@Override
+								public void remove() {
+								}
+							};
+						}
+					}, authors, unblamable, current, total, threadCount);
 				}
-				
-				try {
-					
-					ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-					commit.getId().copyRawTo(buffer);
-					byte[] id = buffer.toByteArray();
-					commits.add(id);
-					
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				
-				String line = contents.getString(j);
-				
-				String authorName = commit.getAuthorIdent().getName();
-				
-				Author author = authors.get(authorName);
-				
-				if (line.trim().isEmpty())
-					author.incEmptyLines();
-				else
-					author.incTextLines();
-			}
+			};
 		}
+		
+		for (int i = 0; i < threads.length; i++)
+			threads[i].start();
+		
+		for (int i = 0; i < threads.length; i++)
+			threads[i].join();
 		
 		List<Author> sortedAuthors = new ArrayList<Author>(authors.values());
 		Collections.sort(sortedAuthors, new Comparator<Author>() {
@@ -160,17 +159,81 @@ public class Main {
 			System.out.println("   Unblamable lines : " + unblamable.get());
 	}
 	
-	static long sum;
-	static int count;
+	private static void computeAuthors(final Repository repository, Iterable<String> files, final Authors authors,
+			final AtomicInteger unblamable, AtomicInteger current, int total, int threadCount) {
+		RevWalk revWalk = new RevWalkResetFlags(repository);
+		TreeWalk treeWalk = new TreeWalk(repository);
+		
+		for (String file : files) {
+			long dt = System.nanoTime();
+			try {
+				BlameResult blame;
+				try {
+					blame = blame(repository, file, revWalk, treeWalk);
+				} catch (GitAPIException e) {
+					e.printStackTrace();
+					return;
+				}
+				
+				RawText contents = blame.getResultContents();
+				for (int j = 0; j < contents.size(); j++) {
+					RevCommit commit = blame.getSourceCommit(j);
+					if (commit == null) {
+						// System.out.println("  Could not blame " + file + " : " + (j + 1));
+						unblamable.incrementAndGet();
+						continue;
+					}
+					
+					// try {
+					//
+					// ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+					// commit.getId().copyRawTo(buffer);
+					// byte[] id = buffer.toByteArray();
+					// commits.add(id);
+					//
+					// } catch (IOException e) {
+					// e.printStackTrace();
+					// }
+					
+					String line = contents.getString(j);
+					
+					String authorName = commit.getAuthorIdent().getName();
+					
+					Author author = authors.get(authorName);
+					
+					if (line.trim().isEmpty())
+						author.incEmptyLines();
+					else
+						author.incTextLines();
+				}
+			} finally {
+				dt = System.nanoTime() - dt;
+				long ms = dt / 1000000;
+				
+				long s = sum.addAndGet(ms);
+				int c = count.incrementAndGet();
+				
+				double avg = s / (double) c;
+				double eta = (avg * total);
+				
+				int i = current.incrementAndGet();
+				
+				System.out.println(String.format(
+						"%4d / %4d : In %4d ms -> avg %4.0f ms (so far %3d s | et %3.0f s | ett %3.0f s)", i, total,
+						ms, avg, s / 1000, eta / 1000, eta / threadCount / 1000));
+			}
+		}
+	}
+	
+	static AtomicLong sum = new AtomicLong();
+	static AtomicInteger count = new AtomicInteger();
 	
 	private static BlameResult blame(Repository repository, String file, RevWalk revWalk, TreeWalk treeWalk)
 			throws GitAPIException {
 		revWalk.reset();
 		treeWalk.reset();
 		
-		long dt = System.nanoTime();
-		
-		BlameGenerator gen = new BlameGenerator(repository, file, revWalk, treeWalk);
+		BlameGenerator gen = new BlameGenerator(repository, file, revWalk, null);
 		try {
 			
 			gen.setTextComparator(RawTextComparator.WS_IGNORE_ALL);
@@ -182,14 +245,6 @@ public class Main {
 			throw new JGitInternalException(e.getMessage(), e);
 		} finally {
 			gen.dispose();
-			
-			dt = System.nanoTime() - dt;
-			long ms = dt / 1000000;
-			
-			sum += ms;
-			count++;
-			
-			System.out.println("In " + ms + " ms -> avg " + (sum / count) + " ms");
 		}
 	}
 }
