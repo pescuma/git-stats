@@ -159,12 +159,11 @@ public class Main {
 	private static void computeAuthors(Repository repository, Iterable<String> files, Result result, Progress progress)
 			throws Exception {
 		RevWalk revWalk = new RevWalkResetFlags(repository);
-		TreeWalk treeWalk = new TreeWalk(repository);
 		
 		for (String file : files) {
 			long dt = System.nanoTime();
 			try {
-				BlameResult blame = blame(repository, file, revWalk, treeWalk);
+				BlameResult blame = blame(repository, file, revWalk);
 				
 				RawText contents = blame.getResultContents();
 				for (int i = 0; i < contents.size(); i++) {
@@ -207,10 +206,8 @@ public class Main {
 	static AtomicLong sum = new AtomicLong();
 	static AtomicInteger count = new AtomicInteger();
 	
-	private static BlameResult blame(Repository repository, String file, RevWalk revWalk, TreeWalk treeWalk)
-			throws GitAPIException {
+	private static BlameResult blame(Repository repository, String file, RevWalk revWalk) throws GitAPIException {
 		revWalk.reset();
-		treeWalk.reset();
 		
 		BlameGenerator gen = new BlameGenerator(repository, file, revWalk, null);
 		try {
