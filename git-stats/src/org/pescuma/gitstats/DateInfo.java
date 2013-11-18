@@ -1,27 +1,37 @@
 package org.pescuma.gitstats;
 
-import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.jgit.revwalk.RevCommit;
 
-public class Author {
+public class DateInfo {
 	
 	private final String name;
-	private final CommitsStats commits = new CommitsStats();
-	private final AtomicInteger textLines = new AtomicInteger();
+	private final AtomicInteger commits = new AtomicInteger();
 	private final AtomicInteger emptyLines = new AtomicInteger();
+	private final AtomicInteger textLines = new AtomicInteger();
 	
-	public Author(String name) {
+	public DateInfo(String name) {
 		this.name = name;
+	}
+	
+	public void addCommit(RevCommit commit) {
+		commits.incrementAndGet();
+	}
+	
+	public void addLine(RevCommit commit, boolean emptyLine) {
+		if (emptyLine)
+			emptyLines.incrementAndGet();
+		else
+			textLines.incrementAndGet();
 	}
 	
 	public String getName() {
 		return name;
 	}
 	
-	public CommitsStats getCommits() {
-		return commits;
+	public int getCommitCount() {
+		return commits.get();
 	}
 	
 	public int getTextLines() {
@@ -36,13 +46,4 @@ public class Author {
 		return textLines.get() + emptyLines.get();
 	}
 	
-	public void add(RevCommit commit, boolean emptyLine) throws IOException {
-		if (commit != null)
-			commits.add(commit, emptyLine);
-		
-		if (emptyLine)
-			emptyLines.incrementAndGet();
-		else
-			textLines.incrementAndGet();
-	}
 }

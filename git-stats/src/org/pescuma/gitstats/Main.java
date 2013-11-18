@@ -1,8 +1,8 @@
 package org.pescuma.gitstats;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -24,6 +24,7 @@ import org.eclipse.jgit.treewalk.TreeWalk;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.Option;
 import org.pescuma.gitstats.blame.BlameGenerator;
 import org.pescuma.gitstats.blame.BlameResult;
 import org.pescuma.gitstats.threads.ParallelLists;
@@ -40,6 +41,7 @@ public class Main {
 		} catch (CmdLineException e) {
 			System.out.println(e.getMessage());
 			parser.printUsage(System.out);
+			return;
 		}
 		
 		parsedArgs.applyDefaults();
@@ -52,6 +54,9 @@ public class Main {
 		@Argument(required = false, usage = "Path with git repository")
 		public File path;
 		
+		@Option(name = "-t", aliases = { "--threads" }, usage = "Number of threads (by default it creates one thread per processor)")
+		public int threads;
+		
 		void applyDefaults() {
 			if (path == null)
 				path = new File(".");
@@ -61,6 +66,9 @@ public class Main {
 			} catch (IOException e) {
 				path = path.getAbsoluteFile();
 			}
+			
+			if (threads < 1)
+				threads = Runtime.getRuntime().availableProcessors();
 		}
 	}
 	
@@ -88,12 +96,10 @@ public class Main {
 			files.add(file);
 		}
 		
-		int threadCount = Runtime.getRuntime().availableProcessors();
-		
 		final Result result = new Result();
-		final Progress progress = new Progress(files.size(), threadCount);
+		final Progress progress = new Progress(files.size(), args.threads);
 		
-		ParallelLists parallel = new ParallelLists(threadCount);
+		ParallelLists parallel = new ParallelLists(args.threads);
 		
 		parallel.splitInThreads(files, new ParallelLists.Callback<String>() {
 			@Override
@@ -102,21 +108,48 @@ public class Main {
 			}
 		});
 		
-		List<Author> sortedAuthors = new ArrayList<Author>(result.authors.values());
-		Collections.sort(sortedAuthors, new Comparator<Author>() {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM");
+		
+		System.out.println();
+		System.out.println("Authors:");
+		for (Author author : sortedAuthors(result))
+			System.out.println(String.format("   %s : %d commits, %d lines (%d code, %d empty), from %s to %s",
+					author.getName(), author.getCommits().getCommitCount(), author.getTotalLines(),
+					author.getTextLines(), author.getEmptyLines(),
+					dateFormat.format(author.getCommits().getFirstDate()),
+					dateFormat.format(author.getCommits().getLastDate())));
+		if (result.unblamable.getTotalLines() > 0)
+			System.out.println(String.format("   Unblamable lines : %d lines (%d code, %d empty)",
+					result.unblamable.getTotalLines(), result.unblamable.getTextLines(),
+					result.unblamable.getEmptyLines()));
+		
+		System.out.println();
+		System.out.println("Months:");
+		for (DateInfo month : sortedMonths(result))
+			System.out.println(String.format("   %s : %d commits, %d lines (%d code, %d empty)", month.getName(),
+					month.getCommitCount(), month.getTotalLines(), month.getTextLines(), month.getEmptyLines()));
+	}
+	
+	private static List<Author> sortedAuthors(final Result result) {
+		List<Author> sorted = new ArrayList<Author>(result.authors.values());
+		Collections.sort(sorted, new Comparator<Author>() {
 			@Override
 			public int compare(Author o1, Author o2) {
 				return o2.getTotalLines() - o1.getTotalLines();
 			}
 		});
-		
-		System.out.println();
-		System.out.println("Authors:");
-		for (Author author : sortedAuthors)
-			System.out.println(String.format("   %s : %d (%d code, %d empty)", author.name, author.getTotalLines(),
-					author.getTextLines(), author.getEmptyLines()));
-		if (result.unblamable.getTotalLines() > 0)
-			System.out.println("   Unblamable lines : " + result.unblamable.getTotalLines());
+		return sorted;
+	}
+	
+	private static List<DateInfo> sortedMonths(final Result result) {
+		List<DateInfo> sorted = new ArrayList<DateInfo>(result.commits.months.values());
+		Collections.sort(sorted, new Comparator<DateInfo>() {
+			@Override
+			public int compare(DateInfo o1, DateInfo o2) {
+				return o1.getName().compareTo(o2.getName());
+			}
+		});
+		return sorted;
 	}
 	
 	private static void computeAuthors(Repository repository, Iterable<String> files, Result result, Progress progress)
@@ -131,23 +164,22 @@ public class Main {
 				
 				RawText contents = blame.getResultContents();
 				for (int i = 0; i < contents.size(); i++) {
+					String line = contents.getString(i);
+					boolean isEmptyLine = line.trim().isEmpty();
+					
 					RevCommit commit = blame.getSourceCommit(i);
 					if (commit == null) {
 						// System.out.println("  Could not blame " + file + " : " + (j + 1));
-						result.unblamable.incTextLines();
+						result.unblamable.add(null, isEmptyLine);
 						continue;
 					}
 					
-					result.addCommit(getId(commit));
+					result.commits.add(commit, isEmptyLine);
 					
 					String authorName = blame.getSourceAuthor(i).getName();
 					Author author = result.authors.get(authorName);
 					
-					String line = contents.getString(i);
-					if (line.trim().isEmpty())
-						author.incEmptyLines();
-					else
-						author.incTextLines();
+					author.add(commit, isEmptyLine);
 				}
 			} finally {
 				dt = System.nanoTime() - dt;
@@ -166,12 +198,6 @@ public class Main {
 						progress.total, ms, avg, s / 1000, eta / 1000, eta / progress.threadCount / 1000));
 			}
 		}
-	}
-	
-	private static byte[] getId(RevCommit commit) throws IOException {
-		ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-		commit.getId().copyRawTo(buffer);
-		return buffer.toByteArray();
 	}
 	
 	static AtomicLong sum = new AtomicLong();
