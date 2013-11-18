@@ -1,13 +1,12 @@
 package org.pescuma.gitstats;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -27,6 +26,7 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.pescuma.gitstats.blame.BlameGenerator;
 import org.pescuma.gitstats.blame.BlameResult;
+import org.pescuma.gitstats.threads.ParallelLists;
 
 public class Main {
 	
@@ -88,61 +88,21 @@ public class Main {
 			files.add(file);
 		}
 		
-		final Authors authors = new Authors();
-		// final Set<byte[]> commits = new ConcurrentSkipListSet<byte[]>();
-		final AtomicInteger unblamable = new AtomicInteger();
-		final AtomicInteger current = new AtomicInteger();
-		final int total = files.size();
+		int threadCount = Runtime.getRuntime().availableProcessors();
 		
-		final int threadCount = Runtime.getRuntime().availableProcessors();
+		final Result result = new Result();
+		final Progress progress = new Progress(files.size(), threadCount);
 		
-		final ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<String>(files);
+		ParallelLists parallel = new ParallelLists(threadCount);
 		
-		Thread[] threads = new Thread[threadCount];
-		for (int i = 0; i < threads.length; i++) {
-			threads[i] = new Thread() {
-				@Override
-				public void run() {
-					computeAuthors(repository, new Iterable<String>() {
-						@Override
-						public Iterator<String> iterator() {
-							return new Iterator<String>() {
-								String next;
-								
-								@Override
-								public boolean hasNext() {
-									if (next == null)
-										next = queue.poll();
-									
-									return next != null;
-								}
-								
-								@Override
-								public String next() {
-									try {
-										return next;
-									} finally {
-										next = null;
-									}
-								}
-								
-								@Override
-								public void remove() {
-								}
-							};
-						}
-					}, authors, unblamable, current, total, threadCount);
-				}
-			};
-		}
+		parallel.splitInThreads(files, new ParallelLists.Callback<String>() {
+			@Override
+			public void run(Iterable<String> files) throws Exception {
+				computeAuthors(repository, files, result, progress);
+			}
+		});
 		
-		for (int i = 0; i < threads.length; i++)
-			threads[i].start();
-		
-		for (int i = 0; i < threads.length; i++)
-			threads[i].join();
-		
-		List<Author> sortedAuthors = new ArrayList<Author>(authors.values());
+		List<Author> sortedAuthors = new ArrayList<Author>(result.authors.values());
 		Collections.sort(sortedAuthors, new Comparator<Author>() {
 			@Override
 			public int compare(Author o1, Author o2) {
@@ -155,52 +115,35 @@ public class Main {
 		for (Author author : sortedAuthors)
 			System.out.println(String.format("   %s : %d (%d code, %d empty)", author.name, author.getTotalLines(),
 					author.getTextLines(), author.getEmptyLines()));
-		if (unblamable.get() > 0)
-			System.out.println("   Unblamable lines : " + unblamable.get());
+		if (result.unblamable.getTotalLines() > 0)
+			System.out.println("   Unblamable lines : " + result.unblamable.getTotalLines());
 	}
 	
-	private static void computeAuthors(final Repository repository, Iterable<String> files, final Authors authors,
-			final AtomicInteger unblamable, AtomicInteger current, int total, int threadCount) {
+	private static void computeAuthors(Repository repository, Iterable<String> files, Result result, Progress progress)
+			throws Exception {
 		RevWalk revWalk = new RevWalkResetFlags(repository);
 		TreeWalk treeWalk = new TreeWalk(repository);
 		
 		for (String file : files) {
 			long dt = System.nanoTime();
 			try {
-				BlameResult blame;
-				try {
-					blame = blame(repository, file, revWalk, treeWalk);
-				} catch (GitAPIException e) {
-					e.printStackTrace();
-					return;
-				}
+				BlameResult blame = blame(repository, file, revWalk, treeWalk);
 				
 				RawText contents = blame.getResultContents();
-				for (int j = 0; j < contents.size(); j++) {
-					RevCommit commit = blame.getSourceCommit(j);
+				for (int i = 0; i < contents.size(); i++) {
+					RevCommit commit = blame.getSourceCommit(i);
 					if (commit == null) {
 						// System.out.println("  Could not blame " + file + " : " + (j + 1));
-						unblamable.incrementAndGet();
+						result.unblamable.incTextLines();
 						continue;
 					}
 					
-					// try {
-					//
-					// ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-					// commit.getId().copyRawTo(buffer);
-					// byte[] id = buffer.toByteArray();
-					// commits.add(id);
-					//
-					// } catch (IOException e) {
-					// e.printStackTrace();
-					// }
+					result.addCommit(getId(commit));
 					
-					String line = contents.getString(j);
+					String authorName = blame.getSourceAuthor(i).getName();
+					Author author = result.authors.get(authorName);
 					
-					String authorName = commit.getAuthorIdent().getName();
-					
-					Author author = authors.get(authorName);
-					
+					String line = contents.getString(i);
 					if (line.trim().isEmpty())
 						author.incEmptyLines();
 					else
@@ -214,15 +157,21 @@ public class Main {
 				int c = count.incrementAndGet();
 				
 				double avg = s / (double) c;
-				double eta = (avg * total);
+				double eta = (avg * progress.total);
 				
-				int i = current.incrementAndGet();
+				int i = progress.current.incrementAndGet();
 				
 				System.out.println(String.format(
-						"%4d / %4d : In %4d ms -> avg %4.0f ms (so far %3d s | et %3.0f s | ett %3.0f s)", i, total,
-						ms, avg, s / 1000, eta / 1000, eta / threadCount / 1000));
+						"%4d / %4d : In %4d ms -> avg %4.0f ms (so far %3d s | et %3.0f s | ett %3.0f s)", i,
+						progress.total, ms, avg, s / 1000, eta / 1000, eta / progress.threadCount / 1000));
 			}
 		}
+	}
+	
+	private static byte[] getId(RevCommit commit) throws IOException {
+		ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+		commit.getId().copyRawTo(buffer);
+		return buffer.toByteArray();
 	}
 	
 	static AtomicLong sum = new AtomicLong();
