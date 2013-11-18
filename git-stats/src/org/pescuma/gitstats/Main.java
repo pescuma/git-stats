@@ -67,8 +67,12 @@ public class Main {
 				path = path.getAbsoluteFile();
 			}
 			
-			if (threads < 1)
+			if (threads < 1) {
 				threads = Runtime.getRuntime().availableProcessors();
+				if (threads >= 4)
+					// Some room for breathing
+					threads--;
+			}
 		}
 	}
 	

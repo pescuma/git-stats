@@ -1,5 +1,7 @@
 package org.pescuma.gitstats;
 
+import static java.lang.Math.*;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -28,8 +30,8 @@ public class CommitsStats {
 		if (commits.putIfAbsent(ba, ba) == null) {
 			// First time this commit is seen
 			synchronized (this) {
-				firstCommit = Math.min(firstCommit, time);
-				lastCommit = Math.max(lastCommit, time);
+				firstCommit = min(firstCommit, time);
+				lastCommit = max(lastCommit, time);
 				info.addCommit(commit);
 			}
 		}
