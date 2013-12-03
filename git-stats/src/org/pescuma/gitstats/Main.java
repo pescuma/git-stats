@@ -6,9 +6,9 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.Map;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.JGitInternalException;
@@ -25,11 +25,23 @@ import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
+import org.pescuma.datatable.DataTable;
+import org.pescuma.datatable.MemoryDataTable;
+import org.pescuma.datatable.DataTable.Value;
 import org.pescuma.gitstats.blame.BlameGenerator;
 import org.pescuma.gitstats.blame.BlameResult;
 import org.pescuma.gitstats.threads.ParallelLists;
 
 public class Main {
+	
+	private static final int COL_LANGUAGE = 0;
+	private static final int COL_LINE_TYPE = 1;
+	private static final int COL_MONTH = 2;
+	private static final int COL_COMMIT = 3;
+	private static final int COL_AUTHOR = 4;
+	
+	private static final String EMPTY = "Empty";
+	private static final String CODE = "Code";
 	
 	public static void main(String[] args) throws IOException, GitAPIException, InterruptedException {
 		Args parsedArgs = new Args();
@@ -100,69 +112,34 @@ public class Main {
 			files.add(file);
 		}
 		
-		final Result result = new Result();
-		final Progress progress = new Progress(files.size(), args.threads);
+		final List<DataTable> tables = Collections.synchronizedList(new ArrayList<DataTable>());
+		final Progress progress = new Progress(files.size());
 		
-		ParallelLists parallel = new ParallelLists(args.threads);
-		
-		parallel.splitInThreads(files, new ParallelLists.Callback<String>() {
+		new ParallelLists(args.threads).splitInThreads(files, new ParallelLists.Callback<String>() {
 			@Override
 			public void run(Iterable<String> files) throws Exception {
-				computeAuthors(repository, files, result, progress);
+				tables.add(computeAuthors(repository, files, progress));
 			}
 		});
 		
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM");
+		DataTable data = new MemoryDataTable();
+		for (DataTable d : tables)
+			data.inc(d);
 		
-		System.out.println();
-		System.out.println("Authors:");
-		for (Author author : sortedAuthors(result))
-			System.out.println(String.format("   %s : %d commits, %d lines (%d code, %d empty), from %s to %s",
-					author.getName(), author.getCommits().getCommitCount(), author.getTotalLines(),
-					author.getTextLines(), author.getEmptyLines(),
-					dateFormat.format(author.getCommits().getFirstDate()),
-					dateFormat.format(author.getCommits().getLastDate())));
-		if (result.unblamable.getTotalLines() > 0)
-			System.out.println(String.format("   Unblamable lines : %d lines (%d code, %d empty)",
-					result.unblamable.getTotalLines(), result.unblamable.getTextLines(),
-					result.unblamable.getEmptyLines()));
-		
-		System.out.println();
-		System.out.println("Months:");
-		for (DateInfo month : sortedMonths(result))
-			System.out.println(String.format("   %s : %d commits, %d lines (%d code, %d empty)", month.getName(),
-					month.getCommitCount(), month.getTotalLines(), month.getTextLines(), month.getEmptyLines()));
+		outputStats(data);
 	}
 	
-	private static List<Author> sortedAuthors(final Result result) {
-		List<Author> sorted = new ArrayList<Author>(result.authors.values());
-		Collections.sort(sorted, new Comparator<Author>() {
-			@Override
-			public int compare(Author o1, Author o2) {
-				return o2.getTotalLines() - o1.getTotalLines();
-			}
-		});
-		return sorted;
-	}
-	
-	private static List<DateInfo> sortedMonths(final Result result) {
-		List<DateInfo> sorted = new ArrayList<DateInfo>(result.commits.months.values());
-		Collections.sort(sorted, new Comparator<DateInfo>() {
-			@Override
-			public int compare(DateInfo o1, DateInfo o2) {
-				return o1.getName().compareTo(o2.getName());
-			}
-		});
-		return sorted;
-	}
-	
-	private static void computeAuthors(Repository repository, Iterable<String> files, Result result, Progress progress)
+	private static DataTable computeAuthors(Repository repository, Iterable<String> files, Progress progress)
 			throws Exception {
+		DataTable data = new MemoryDataTable();
+		
 		RevWalk revWalk = new RevWalkResetFlags(repository);
 		
 		for (String file : files) {
-			long dt = System.nanoTime();
+			String language = FilenameToLanguage.detectLanguage(file);
+			
 			try {
+				
 				BlameResult blame = blame(repository, file, revWalk);
 				
 				RawText contents = blame.getResultContents();
@@ -173,38 +150,24 @@ public class Main {
 					RevCommit commit = blame.getSourceCommit(i);
 					if (commit == null) {
 						// System.out.println("  Could not blame " + file + " : " + (j + 1));
-						result.unblamable.add(null, isEmptyLine);
+						data.inc(1, language, isEmptyLine ? EMPTY : CODE);
 						continue;
 					}
 					
-					result.commits.add(commit, isEmptyLine);
-					
+					int time = commit.getCommitTime();
+					String month = new SimpleDateFormat("yyyy-MM").format(new Date(time * 1000L));
 					String authorName = blame.getSourceAuthor(i).getName();
-					Author author = result.authors.get(authorName);
 					
-					author.add(commit, isEmptyLine);
+					data.inc(1, language, isEmptyLine ? EMPTY : CODE, month, commit.getId().getName(), authorName);
 				}
+				
 			} finally {
-				dt = System.nanoTime() - dt;
-				long ms = dt / 1000000;
-				
-				long s = sum.addAndGet(ms);
-				int c = count.incrementAndGet();
-				
-				double avg = s / (double) c;
-				double eta = (avg * progress.total);
-				
-				int i = progress.current.incrementAndGet();
-				
-				System.out.println(String.format(
-						"%4d / %4d : In %4d ms -> avg %4.0f ms (so far %3d s | et %3.0f s | ett %3.0f s)", i,
-						progress.total, ms, avg, s / 1000, eta / 1000, eta / progress.threadCount / 1000));
+				progress.step();
 			}
 		}
+		
+		return data;
 	}
-	
-	static AtomicLong sum = new AtomicLong();
-	static AtomicInteger count = new AtomicInteger();
 	
 	private static BlameResult blame(Repository repository, String file, RevWalk revWalk) throws GitAPIException {
 		revWalk.reset();
@@ -222,5 +185,102 @@ public class Main {
 		} finally {
 			gen.dispose();
 		}
+	}
+	
+	private static void outputStats(DataTable data) {
+		double totalLines = data.sum();
+		
+		System.out.println();
+		System.out.println("Authors:");
+		for (String author : sortedByLines(data, COL_AUTHOR)) {
+			if (author.isEmpty())
+				continue;
+			
+			DataTable authorData = data.filter(COL_AUTHOR, author);
+			String[] months = getMonthRange(authorData);
+			double authorLines = authorData.sum();
+			
+			System.out.println(String.format(
+					"   %s : %.0f%% of the lines in %d commits: %.0f lines (%.0f code, %.0f empty) from %s to %s", //
+					author, //
+					percent(authorLines, totalLines), //
+					authorData.getDistinct(COL_COMMIT).size(), //
+					authorLines, //
+					authorData.filter(COL_LINE_TYPE, CODE).sum(), //
+					authorData.filter(COL_LINE_TYPE, EMPTY).sum(), //
+					months[0], //
+					months[1]));
+		}
+		{
+			DataTable unblamableData = data.filter(COL_AUTHOR, "");
+			double unblamableLines = unblamableData.sum();
+			if (unblamableLines > 0) {
+				System.out.println(String.format(
+						"   Unblamable lines : %.0f%% of the lines: %.0f lines (%.0f code, %.0f empty)",
+						percent(unblamableLines, totalLines), //
+						unblamableLines, //
+						unblamableData.filter(COL_LINE_TYPE, CODE).sum(), //
+						unblamableData.filter(COL_LINE_TYPE, EMPTY).sum()));
+			}
+		}
+		
+		System.out.println();
+		System.out.println("Months:");
+		for (String month : data.getDistinct(COL_MONTH)) {
+			DataTable monthData = data.filter(COL_MONTH, month);
+			double monthLines = monthData.sum();
+			
+			System.out.println(String.format("   %s : %d commits, %.0f lines (%.0f code, %.0f empty)", //
+					month, //
+					monthData.getDistinct(COL_COMMIT).size(), //
+					monthLines, //
+					monthData.filter(COL_LINE_TYPE, CODE).sum(), //
+					monthData.filter(COL_LINE_TYPE, EMPTY).sum()));
+		}
+		
+		System.out.println();
+		System.out.println("Languages:");
+		for (String language : sortedByLines(data, COL_LANGUAGE)) {
+			DataTable languageData = data.filter(COL_LANGUAGE, language);
+			String[] months = getMonthRange(languageData);
+			double languageLines = languageData.sum();
+			
+			System.out.println(String.format("   %s : %.0f lines (%.0f code, %.0f empty) in %d commits, "
+					+ "from %s to %s (%.0f umblamable)", //
+					language, //
+					languageLines, //
+					languageData.filter(COL_LINE_TYPE, CODE).sum(), //
+					languageData.filter(COL_LINE_TYPE, EMPTY).sum(), //
+					languageData.getDistinct(COL_COMMIT).size(), //
+					months[0], //
+					months[1], //
+					languageData.filter(COL_AUTHOR, "").sum()));
+		}
+	}
+	
+	private static double percent(double count, double total) {
+		return count * 100 / total;
+	}
+	
+	private static String[] getMonthRange(DataTable authorData) {
+		List<String> result = new ArrayList<String>(authorData.getDistinct(COL_MONTH));
+		result.remove("");
+		if (result.size() < 1)
+			return new String[] { "unknown", "unknown" };
+		else
+			return new String[] { result.get(0), result.get(result.size() - 1) };
+	}
+	
+	private static List<String> sortedByLines(DataTable data, int col) {
+		final Map<String, Value> authorAndLines = data.sumDistinct(col);
+		
+		List<String> sorted = new ArrayList<String>(authorAndLines.keySet());
+		Collections.sort(sorted, new Comparator<String>() {
+			@Override
+			public int compare(String o1, String o2) {
+				return (int) (authorAndLines.get(o2).value - authorAndLines.get(o1).value);
+			}
+		});
+		return sorted;
 	}
 }

@@ -9,5 +9,7 @@
 	<classpathentry kind="lib" path="lib/auto/compile/args4j-2.0.26-bundle.jar" sourcepath="lib/auto/compile/args4j-2.0.26-source.jar"/>
 	<classpathentry kind="lib" path="lib/auto/compile/commons-io-2.2-jar.jar" sourcepath="lib/auto/compile/commons-io-2.2-source.jar"/>
 	<classpathentry kind="lib" path="lib/org.eclipse.jgit-3.2.0-SNAPSHOT.jar" sourcepath="lib/org.eclipse.jgit-3.2.0-SNAPSHOT-sources.jar"/>
+	<classpathentry kind="lib" path="lib/auto/compile/guava-14.0-bundle.jar" sourcepath="lib/auto/compile/guava-14.0-source.jar"/>
+	<classpathentry kind="lib" path="lib/auto/compile/opencsv-2.3-jar.jar" sourcepath="lib/auto/compile/opencsv-2.3-source.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
