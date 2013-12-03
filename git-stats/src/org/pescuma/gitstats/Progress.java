@@ -27,12 +27,29 @@ public class Progress {
 		if (!lastUpdate.compareAndSet(last, now))
 			return;
 		
+		output(c, now);
+	}
+	
+	private void output(int c, long now) {
 		long dt = now - start;
 		double percent = c * 100. / total;
 		double avg = dt / (double) c;
 		double eta = avg * (total - c);
 		
-		System.err.print(String.format("\rProcessing files... %.0f %% (%d of %d) | Elapsed %d s | ETA %.0f s", percent,
+		System.out.print(String.format("\rProcessing files... %.0f %% (%d of %d) | Elapsed %d s | ETA %.0f s", percent,
 				c, total, dt / 1000, eta / 1000));
+	}
+	
+	public void finish() {
+		output(current.get(), System.currentTimeMillis());
+		
+		System.out.print("\r" + spaces(79) + "\r");
+	}
+	
+	private String spaces(int count) {
+		StringBuilder result = new StringBuilder();
+		for (int i = 0; i < count; i++)
+			result.append(' ');
+		return result.toString();
 	}
 }

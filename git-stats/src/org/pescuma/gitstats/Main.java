@@ -26,8 +26,8 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.pescuma.datatable.DataTable;
-import org.pescuma.datatable.MemoryDataTable;
 import org.pescuma.datatable.DataTable.Value;
+import org.pescuma.datatable.MemoryDataTable;
 import org.pescuma.gitstats.blame.BlameGenerator;
 import org.pescuma.gitstats.blame.BlameResult;
 import org.pescuma.gitstats.threads.ParallelLists;
@@ -126,6 +126,8 @@ public class Main {
 		for (DataTable d : tables)
 			data.inc(d);
 		
+		progress.finish();
+		
 		outputStats(data);
 	}
 	
@@ -201,13 +203,13 @@ public class Main {
 			double authorLines = authorData.sum();
 			
 			System.out.println(String.format(
-					"   %s : %.0f%% of the lines in %d commits: %.0f lines (%.0f code, %.0f empty) from %s to %s", //
+					"   %s : %.1f%% of the lines: %.0f lines (%.0f code, %.0f empty) in %d commits from %s to %s", //
 					author, //
 					percent(authorLines, totalLines), //
-					authorData.getDistinct(COL_COMMIT).size(), //
 					authorLines, //
 					authorData.filter(COL_LINE_TYPE, CODE).sum(), //
 					authorData.filter(COL_LINE_TYPE, EMPTY).sum(), //
+					authorData.getDistinct(COL_COMMIT).size(), //
 					months[0], //
 					months[1]));
 		}
@@ -216,7 +218,7 @@ public class Main {
 			double unblamableLines = unblamableData.sum();
 			if (unblamableLines > 0) {
 				System.out.println(String.format(
-						"   Unblamable lines : %.0f%% of the lines: %.0f lines (%.0f code, %.0f empty)",
+						"   Unblamable lines : %.1f%% of the lines: %.0f lines (%.0f code, %.0f empty)",
 						percent(unblamableLines, totalLines), //
 						unblamableLines, //
 						unblamableData.filter(COL_LINE_TYPE, CODE).sum(), //
@@ -227,15 +229,18 @@ public class Main {
 		System.out.println();
 		System.out.println("Months:");
 		for (String month : data.getDistinct(COL_MONTH)) {
+			if (month.isEmpty())
+				continue;
+			
 			DataTable monthData = data.filter(COL_MONTH, month);
 			double monthLines = monthData.sum();
 			
-			System.out.println(String.format("   %s : %d commits, %.0f lines (%.0f code, %.0f empty)", //
+			System.out.println(String.format("   %s : %.0f lines (%.0f code, %.0f empty) in %d commits", //
 					month, //
-					monthData.getDistinct(COL_COMMIT).size(), //
 					monthLines, //
 					monthData.filter(COL_LINE_TYPE, CODE).sum(), //
-					monthData.filter(COL_LINE_TYPE, EMPTY).sum()));
+					monthData.filter(COL_LINE_TYPE, EMPTY).sum(),//
+					monthData.getDistinct(COL_COMMIT).size()));
 		}
 		
 		System.out.println();
