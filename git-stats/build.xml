@@ -1,8 +1,104 @@
 <project name="git-stats" default="all">
 
 	<property name="project" value="git-stats" />
+	<property name="version" value="0.1" />
 
 	<import file="ivy.xml" />
 	<import file="project.xml" />
+
+	<property name="build.dir" value="${basedir}/build" />
+	<property name="build.tmp.dir" value="${build.dir}/tmp" />
+
+	<taskdef resource="net/sf/antcontrib/antlib.xml" classpath="${basedir}/lib/build/ant-contrib-1.0b3.jar" />
+
+	<target name="all"
+	        description="Compile, test, pack and report"
+	        depends="init, clean, deps, compile, pack, clean-tmp, onejar.group, onejar.proguard, wrap, clean-tmp">
+	</target>
+
+	<target name="onejar.group">
+		<delete dir="${build.tmp.dir}" quiet="true" />
+		<mkdir dir="${build.tmp.dir}" />
+
+		<unzip dest="${build.tmp.dir}">
+			<fileset dir="build/dist">
+				<include name="**/*.jar" />
+				<exclude name="**/*-source.jar" />
+				<exclude name="**/*-sources.jar" />
+				<exclude name="**/*-tests.jar" />
+			</fileset>
+			<fileset dir="lib">
+				<include name="**/*.jar" />
+				<exclude name="**/*-source.jar" />
+				<exclude name="**/*-sources.jar" />
+				<exclude name="**/ivy-*.jar" />
+				<exclude name="**/ant-*.jar" />
+				<exclude name="auto/compile/**/*" />
+				<exclude name="build/**/*" />
+			</fileset>
+		</unzip>
+
+		<delete file="${build.tmp.dir}/about.html" quiet="true" />
+		<delete file="${build.tmp.dir}/plugin.properties" quiet="true" />
+
+		<delete dir="${build.dir}" includes="git-stats.full*.jar" quiet="true" />
+
+		<jar destfile="${build.dir}/git-stats.full-${version}.jar" filesetmanifest="mergewithoutmain">
+			<manifest>
+				<attribute name="Main-Class" value="org.pescuma.gitstats.Main" />
+				<attribute name="Class-Path" value="." />
+			</manifest>
+			<fileset dir="${build.tmp.dir}" />
+		</jar>
+	</target>
+
+	<target name="onejar.proguard">
+		<taskdef resource="proguard/ant/task.properties" classpath="${basedir}/lib/build/proguard-4.9.jar" />
+
+		<delete file="${build.dir}/git-stats-${version}.jar" quiet="true" />
+
+		<proguard>
+			-libraryjars "${java.home}/lib/rt.jar"
+			-injars      "${build.dir}/git-stats.full-${version}.jar"
+			-outjars     "${build.dir}/git-stats-${version}.jar"
+			-dontoptimize
+			-dontobfuscate
+			-dontwarn
+				
+			-keep class org.pescuma.gitstats.Main {*;}
+			-keep class com.google.common.base.FinalizableReference {*;}
+			-keep class org.kohsuke.args4j.spi.* {*;}
+			-keep class org.eclipse.jgit.revwalk.* {*;}
+			
+			-dontnote **
+		</proguard>
+	</target>
+
+	<condition property="isWindows">
+		<os family="windows" />
+	</condition>
+
+	<target name="wrap" if="isWindows">
+		<taskdef name="launch4j"
+		         classname="net.sf.launch4j.ant.Launch4jTask"
+		         classpath="${basedir}/lib/build/launch4j/launch4j.jar:${basedir}/lib/build/launch4j/lib/xstream.jar" />
+
+		<launch4j>
+			<config headerType="console"
+			        jarPath="${build.dir}\git-stats-${version}.jar"
+			        outfile="${build.dir}\git-stats-${version}.exe">
+				<jre minVersion="1.6.0" />
+				<versionInfo fileVersion="${version}.0.0"
+				             txtFileVersion="${version}"
+				             fileDescription="git-stats cli"
+				             copyright="Ricardo Pescuma Domenecci"
+				             productVersion="${version}.0.0"
+				             txtProductVersion="${version}"
+				             productName="git-stats"
+				             internalName="git-stats"
+				             originalFilename="git-stats.exe" />
+			</config>
+		</launch4j>
+	</target>
 
 </project>

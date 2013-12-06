@@ -245,12 +245,6 @@
 			</fileset>
 		</jar>
 		<jar jarfile="${dist.dir}/${project}-${version}-source.jar" basedir="${src.dir}" />
-		<if>
-			<istrue value="${tests.present}" />
-			<then>
-				<jar jarfile="${dist.dir}/${project}-${version}-tests.jar" basedir="${build.tests.dir}" />
-			</then>
-		</if>
 	</target>
 
 	<!-- Ivy -->
