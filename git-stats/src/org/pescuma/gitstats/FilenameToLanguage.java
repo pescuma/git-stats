@@ -119,6 +119,7 @@ public class FilenameToLanguage {
 		extensions.put("lsp", "Lisp");
 		extensions.put("lisp", "Lisp");
 		extensions.put("lua", "Lua");
+		extensions.put("md", "Text");
 		extensions.put("m3", "Modula3");
 		extensions.put("m4", "m4");
 		extensions.put("makefile", "make");
@@ -198,6 +199,7 @@ public class FilenameToLanguage {
 		extensions.put("tk", "Tcl/Tk");
 		extensions.put("tpl", "Smarty");
 		extensions.put("trigger", "Apex Trigger");
+		extensions.put("txt", "Text");
 		extensions.put("vala", "Vala");
 		extensions.put("vapi", "Vala Header");
 		extensions.put("vhd", "VHDL");
