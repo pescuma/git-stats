@@ -1,5 +1,7 @@
 package org.pescuma.gitstats;
 
+import static java.lang.Math.*;
+
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -249,9 +251,10 @@ public class Main {
 			DataTable languageData = data.filter(COL_LANGUAGE, language);
 			String[] months = getMonthRange(languageData);
 			double languageLines = languageData.sum();
+			long unblamable = round(languageData.filter(COL_AUTHOR, "").sum());
 			
 			System.out.println(String.format("   %s : %.0f lines (%.0f code, %.0f empty) in %d commits, "
-					+ "from %s to %s (%.0f umblamable)", //
+					+ "from %s to %s%s", //
 					language, //
 					languageLines, //
 					languageData.filter(COL_LINE_TYPE, CODE).sum(), //
@@ -259,7 +262,7 @@ public class Main {
 					languageData.getDistinct(COL_COMMIT).size(), //
 					months[0], //
 					months[1], //
-					languageData.filter(COL_AUTHOR, "").sum()));
+					unblamable > 0 ? String.format("(%d umblamable)", unblamable) : ""));
 		}
 	}
 	
