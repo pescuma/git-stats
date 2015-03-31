@@ -9,14 +9,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.JGitInternalException;
 import org.eclipse.jgit.diff.RawText;
 import org.eclipse.jgit.diff.RawTextComparator;
 import org.eclipse.jgit.lib.Constants;
+import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
@@ -42,6 +45,7 @@ public class Main {
 	private static final int COL_AUTHOR = 4;
 	
 	private static final String EMPTY = "Empty";
+	private static final String IGNORED = "Ignored";
 	private static final String CODE = "Code";
 	
 	public static void main(String[] args) throws IOException, GitAPIException,
@@ -70,6 +74,9 @@ public class Main {
 		
 		@Option(name = "-t", aliases = { "--threads" }, usage = "Number of threads (by default it creates one thread per processor)")
 		public int threads;
+		
+		@Option(name = "-i", aliases = { "--ignore-rev" }, usage = "Revision to ignore (can be used multiple times)")
+		public List<String> ignoredRevisions = new ArrayList<String>();
 		
 		void applyDefaults() {
 			if (path == null)
@@ -100,6 +107,14 @@ public class Main {
 		RevWalk walk = new RevWalk(repository);
 		RevCommit head = walk.parseCommit(repository.resolve(Constants.HEAD));
 		
+		Set<ObjectId> ignored = new HashSet<ObjectId>();
+		for (String id : args.ignoredRevisions) {
+			ObjectId rid = repository.resolve(id);
+			if (rid == null)
+				System.out.println("Could not find revision " + id);
+			ignored.add(rid);
+		}
+		
 		TreeWalk tree = new TreeWalk(repository);
 		tree.addTree(head.getTree());
 		tree.setRecursive(true);
@@ -120,7 +135,7 @@ public class Main {
 		new ParallelLists(args.threads).splitInThreads(files, new ParallelLists.Callback<String>() {
 			@Override
 			public void run(Iterable<String> files) throws Exception {
-				tables.add(computeAuthors(repository, files, progress));
+				tables.add(computeAuthors(repository, ignored, files, progress));
 			}
 		});
 		
@@ -133,15 +148,15 @@ public class Main {
 		outputStats(data);
 	}
 	
-	private static DataTable computeAuthors(Repository repository, Iterable<String> files,
-			Progress progress) throws Exception {
+	private static DataTable computeAuthors(Repository repository, Set<ObjectId> ignored,
+			Iterable<String> files, Progress progress) throws Exception {
 		DataTable data = new MemoryDataTable();
 		
 		RevWalk revWalk = new RevWalk(repository);
 		
 		for (String file : files) {
 			try {
-				computeAuthors(data, repository, revWalk, file);
+				computeAuthors(data, repository, ignored, revWalk, file);
 			} finally {
 				progress.step();
 			}
@@ -150,8 +165,8 @@ public class Main {
 		return data;
 	}
 	
-	private static void computeAuthors(DataTable data, Repository repository, RevWalk revWalk,
-			String file) throws GitAPIException {
+	private static void computeAuthors(DataTable data, Repository repository,
+			Set<ObjectId> ignored, RevWalk revWalk, String file) throws GitAPIException {
 		
 		String language = FilenameToLanguage.detectLanguage(file);
 		
@@ -172,6 +187,12 @@ public class Main {
 			int time = commit.getCommitTime();
 			String month = new SimpleDateFormat("yyyy-MM").format(new Date(time * 1000L));
 			String authorName = blame.getSourceAuthor(i).getName();
+			
+			if (ignored.contains(commit.getId())) {
+				data.inc(1, language, isEmptyLine ? EMPTY : CODE, month, commit.getId().getName(),
+						IGNORED);
+				continue;
+			}
 			
 			data.inc(1, language, isEmptyLine ? EMPTY : CODE, month, commit.getId().getName(),
 					authorName);
