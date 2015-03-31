@@ -14,15 +14,17 @@
 	</publications>
 
 	<dependencies>
-		<dependency org="commons-io" name="commons-io" rev="2.2" />
-		<dependency org="args4j" name="args4j" rev="2.0.26" />
-		<dependency org="com.google.guava" name="guava" rev="14.0" />
+		<dependency org="commons-io" name="commons-io" rev="2.4" />
+		<dependency org="args4j" name="args4j" rev="2.32" />
+		<dependency org="com.google.guava" name="guava" rev="18.0" />
 		<dependency org="net.sf.opencsv" name="opencsv" rev="2.3" />
 
-		<!-- for jgit -->
-		<dependency org="com.googlecode.javaewah" name="JavaEWAH" rev="0.7.9" />
-		<dependency org="com.jcraft" name="jsch" rev="0.1.50" />
+		<dependency org="org.eclipse.jgit" name="org.eclipse.jgit" rev="3.7.0.201502260915-r"/>
 
-		<dependency org="junit" name="junit" rev="4.11" conf="compile" />
+		<dependency org="junit" name="junit" rev="4.12" conf="compile" />
+		
+		<dependency org="org.slf4j" name="slf4j-api" rev="1.7.12"/>
+		<dependency org="org.slf4j" name="slf4j-jdk14" rev="1.7.12"/>
+		
 	</dependencies>
 </ivy-module>

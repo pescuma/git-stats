@@ -4,14 +4,14 @@
 	<property name="project.deps" value="" />
 	<property name="version" value="devel" />
 
-	<script language="javascript">
+	<!--script language="javascript">
 		<![CDATA[ 
 	        importClass(java.util.Locale);
 	        actualDefault = Locale.getDefault();
-	        project.setProperty("---actual-default-locale---", actualDefault);
+	        project.setProperty("- - -actual-default-locale- - -", actualDefault);
 	        Locale.setDefault(Locale.US);
 	    ]]>
-	</script>
+	</script -->
 
 	<property name="project.dir" location="${basedir}" />
 	<property name="src.dir" location="${project.dir}/src" />

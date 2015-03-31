@@ -3,13 +3,19 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/auto/compile/hamcrest-core-1.3-jar.jar"/>
-	<classpathentry kind="lib" path="lib/auto/compile/junit-4.11-jar.jar" sourcepath="lib/auto/compile/junit-4.11-source.jar"/>
-	<classpathentry kind="lib" path="lib/auto/compile/args4j-2.0.26-bundle.jar" sourcepath="lib/auto/compile/args4j-2.0.26-source.jar"/>
-	<classpathentry kind="lib" path="lib/auto/compile/commons-io-2.2-jar.jar" sourcepath="lib/auto/compile/commons-io-2.2-source.jar"/>
-	<classpathentry kind="lib" path="lib/org.eclipse.jgit-3.2.0-SNAPSHOT.jar" sourcepath="lib/org.eclipse.jgit-3.2.0-SNAPSHOT-sources.jar"/>
-	<classpathentry kind="lib" path="lib/auto/compile/guava-14.0-bundle.jar" sourcepath="lib/auto/compile/guava-14.0-source.jar"/>
 	<classpathentry kind="lib" path="lib/auto/compile/opencsv-2.3-jar.jar" sourcepath="lib/auto/compile/opencsv-2.3-source.jar"/>
 	<classpathentry kind="lib" path="lib/auto/compile/JavaEWAH-0.7.9-bundle.jar"/>
 	<classpathentry kind="lib" path="lib/auto/compile/jsch-0.1.50-jar.jar"/>
+	<classpathentry kind="lib" path="lib/auto/compile/args4j-2.32-bundle.jar" sourcepath="lib/auto/compile/args4j-2.32-source.jar"/>
+	<classpathentry kind="lib" path="lib/auto/compile/commons-codec-1.4-jar.jar"/>
+	<classpathentry kind="lib" path="lib/auto/compile/commons-io-2.4-jar.jar" sourcepath="lib/auto/compile/commons-io-2.4-source.jar"/>
+	<classpathentry kind="lib" path="lib/auto/compile/commons-logging-1.1.1-jar.jar"/>
+	<classpathentry kind="lib" path="lib/auto/compile/guava-18.0-bundle.jar" sourcepath="lib/auto/compile/guava-18.0-source.jar"/>
+	<classpathentry kind="lib" path="lib/auto/compile/httpclient-4.1.3-jar.jar"/>
+	<classpathentry kind="lib" path="lib/auto/compile/httpcore-4.1.4-jar.jar"/>
+	<classpathentry kind="lib" path="lib/auto/compile/junit-4.12-jar.jar" sourcepath="lib/auto/compile/junit-4.12-source.jar"/>
+	<classpathentry kind="lib" path="lib/auto/compile/org.eclipse.jgit-3.7.0.201502260915-r-jar.jar" sourcepath="lib/auto/compile/org.eclipse.jgit-3.7.0.201502260915-r-source.jar"/>
+	<classpathentry kind="lib" path="lib/auto/compile/slf4j-api-1.7.12-jar.jar" sourcepath="lib/auto/compile/slf4j-api-1.7.12-source.jar"/>
+	<classpathentry kind="lib" path="lib/auto/compile/slf4j-jdk14-1.7.12-jar.jar" sourcepath="lib/auto/compile/slf4j-jdk14-1.7.12-source.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

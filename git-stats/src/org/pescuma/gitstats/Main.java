@@ -1,6 +1,6 @@
 package org.pescuma.gitstats;
 
-import static java.lang.Math.*;
+import static java.lang.Math.round;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,7 +20,6 @@ import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
-import org.eclipse.jgit.revwalk.RevWalkResetFlags;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.kohsuke.args4j.Argument;
@@ -45,7 +44,8 @@ public class Main {
 	private static final String EMPTY = "Empty";
 	private static final String CODE = "Code";
 	
-	public static void main(String[] args) throws IOException, GitAPIException, InterruptedException {
+	public static void main(String[] args) throws IOException, GitAPIException,
+			InterruptedException {
 		Args parsedArgs = new Args();
 		CmdLineParser parser = new CmdLineParser(parsedArgs);
 		try {
@@ -133,38 +133,15 @@ public class Main {
 		outputStats(data);
 	}
 	
-	private static DataTable computeAuthors(Repository repository, Iterable<String> files, Progress progress)
-			throws Exception {
+	private static DataTable computeAuthors(Repository repository, Iterable<String> files,
+			Progress progress) throws Exception {
 		DataTable data = new MemoryDataTable();
 		
-		RevWalk revWalk = new RevWalkResetFlags(repository);
+		RevWalk revWalk = new RevWalk(repository);
 		
 		for (String file : files) {
-			String language = FilenameToLanguage.detectLanguage(file);
-			
 			try {
-				
-				BlameResult blame = blame(repository, file, revWalk);
-				
-				RawText contents = blame.getResultContents();
-				for (int i = 0; i < contents.size(); i++) {
-					String line = contents.getString(i);
-					boolean isEmptyLine = line.trim().isEmpty();
-					
-					RevCommit commit = blame.getSourceCommit(i);
-					if (commit == null) {
-						// System.out.println("  Could not blame " + file + " : " + (j + 1));
-						data.inc(1, language, isEmptyLine ? EMPTY : CODE);
-						continue;
-					}
-					
-					int time = commit.getCommitTime();
-					String month = new SimpleDateFormat("yyyy-MM").format(new Date(time * 1000L));
-					String authorName = blame.getSourceAuthor(i).getName();
-					
-					data.inc(1, language, isEmptyLine ? EMPTY : CODE, month, commit.getId().getName(), authorName);
-				}
-				
+				computeAuthors(data, repository, revWalk, file);
 			} finally {
 				progress.step();
 			}
@@ -173,11 +150,41 @@ public class Main {
 		return data;
 	}
 	
-	private static BlameResult blame(Repository repository, String file, RevWalk revWalk) throws GitAPIException {
+	private static void computeAuthors(DataTable data, Repository repository, RevWalk revWalk,
+			String file) throws GitAPIException {
+		
+		String language = FilenameToLanguage.detectLanguage(file);
+		
+		BlameResult blame = blame(repository, file, revWalk);
+		
+		RawText contents = blame.getResultContents();
+		for (int i = 0; i < contents.size(); i++) {
+			String line = contents.getString(i);
+			boolean isEmptyLine = line.trim().isEmpty();
+			
+			RevCommit commit = blame.getSourceCommit(i);
+			if (commit == null) {
+				// System.out.println("  Could not blame " + file + " : " + (j + 1));
+				data.inc(1, language, isEmptyLine ? EMPTY : CODE);
+				continue;
+			}
+			
+			int time = commit.getCommitTime();
+			String month = new SimpleDateFormat("yyyy-MM").format(new Date(time * 1000L));
+			String authorName = blame.getSourceAuthor(i).getName();
+			
+			data.inc(1, language, isEmptyLine ? EMPTY : CODE, month, commit.getId().getName(),
+					authorName);
+		}
+	}
+	
+	private static BlameResult blame(Repository repository, String file, RevWalk revWalk)
+			throws GitAPIException {
 		revWalk.reset();
 		
 		BlameGenerator gen = new BlameGenerator(repository, file, revWalk, null);
 		try {
+			revWalk.markStart(revWalk.lookupCommit(repository.resolve(Constants.HEAD)));
 			
 			gen.setTextComparator(RawTextComparator.WS_IGNORE_ALL);
 			gen.setFollowFileRenames(true);
@@ -204,27 +211,29 @@ public class Main {
 			String[] months = getMonthRange(authorData);
 			double authorLines = authorData.sum();
 			
-			System.out.println(String.format(
-					"   %s : %.1f%% of the lines: %.0f lines (%.0f code, %.0f empty) in %d commits from %s to %s", //
-					author, //
-					percent(authorLines, totalLines), //
-					authorLines, //
-					authorData.filter(COL_LINE_TYPE, CODE).sum(), //
-					authorData.filter(COL_LINE_TYPE, EMPTY).sum(), //
-					authorData.getDistinct(COL_COMMIT).size(), //
-					months[0], //
-					months[1]));
+			System.out
+					.println(String
+							.format("   %s : %.1f%% of the lines: %.0f lines (%.0f code, %.0f empty) in %d commits from %s to %s", //
+									author, //
+									percent(authorLines, totalLines), //
+									authorLines, //
+									authorData.filter(COL_LINE_TYPE, CODE).sum(), //
+									authorData.filter(COL_LINE_TYPE, EMPTY).sum(), //
+									authorData.getDistinct(COL_COMMIT).size(), //
+									months[0], //
+									months[1]));
 		}
 		{
 			DataTable unblamableData = data.filter(COL_AUTHOR, "");
 			double unblamableLines = unblamableData.sum();
 			if (unblamableLines > 0) {
-				System.out.println(String.format(
-						"   Unblamable lines : %.1f%% of the lines: %.0f lines (%.0f code, %.0f empty)",
-						percent(unblamableLines, totalLines), //
-						unblamableLines, //
-						unblamableData.filter(COL_LINE_TYPE, CODE).sum(), //
-						unblamableData.filter(COL_LINE_TYPE, EMPTY).sum()));
+				System.out
+						.println(String
+								.format("   Unblamable lines : %.1f%% of the lines: %.0f lines (%.0f code, %.0f empty)",
+										percent(unblamableLines, totalLines), //
+										unblamableLines, //
+										unblamableData.filter(COL_LINE_TYPE, CODE).sum(), //
+										unblamableData.filter(COL_LINE_TYPE, EMPTY).sum()));
 			}
 		}
 		
@@ -237,7 +246,8 @@ public class Main {
 			DataTable monthData = data.filter(COL_MONTH, month);
 			double monthLines = monthData.sum();
 			
-			System.out.println(String.format("   %s : %.0f lines (%.0f code, %.0f empty) in %d commits", //
+			System.out.println(String.format(
+					"   %s : %.0f lines (%.0f code, %.0f empty) in %d commits", //
 					month, //
 					monthLines, //
 					monthData.filter(COL_LINE_TYPE, CODE).sum(), //
@@ -253,8 +263,9 @@ public class Main {
 			double languageLines = languageData.sum();
 			long unblamable = round(languageData.filter(COL_AUTHOR, "").sum());
 			
-			System.out.println(String.format("   %s : %.0f lines (%.0f code, %.0f empty) in %d commits, "
-					+ "from %s to %s%s", //
+			System.out.println(String.format(
+					"   %s : %.0f lines (%.0f code, %.0f empty) in %d commits, "
+							+ "from %s to %s%s", //
 					language, //
 					languageLines, //
 					languageData.filter(COL_LINE_TYPE, CODE).sum(), //
