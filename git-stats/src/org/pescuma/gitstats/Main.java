@@ -123,8 +123,8 @@ public class Main {
 		RevWalk walk = new RevWalk(repository);
 		RevCommit head = walk.parseCommit(repository.resolve(Constants.HEAD));
 		
-		Set<ObjectId> ignored = preProcessIgnored(args, repository);
-		Map<String, String> authorMappings = preProcessMappings(args);
+		final Set<ObjectId> ignored = preProcessIgnored(args, repository);
+		final Map<String, String> authorMappings = preProcessMappings(args);
 		
 		TreeWalk tree = new TreeWalk(repository);
 		tree.addTree(head.getTree());
