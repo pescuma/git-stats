@@ -32,6 +32,7 @@ import org.kohsuke.args4j.Option;
 import org.pescuma.datatable.DataTable;
 import org.pescuma.datatable.DataTable.Value;
 import org.pescuma.datatable.MemoryDataTable;
+import org.pescuma.gitstats.SimpleFileParser.LineType;
 import org.pescuma.gitstats.blame.BlameGenerator;
 import org.pescuma.gitstats.blame.BlameResult;
 import org.pescuma.gitstats.threads.ParallelLists;
@@ -45,8 +46,10 @@ public class Main {
 	private static final int COL_AUTHOR = 4;
 	
 	private static final String EMPTY = "Empty";
-	private static final String IGNORED = "Ignored";
 	private static final String CODE = "Code";
+	private static final String COMMENT = "Comment";
+	
+	private static final String IGNORED = "Ignored";
 	
 	public static void main(String[] args) throws IOException, GitAPIException,
 			InterruptedException {
@@ -168,6 +171,7 @@ public class Main {
 	private static void computeAuthors(DataTable data, Repository repository,
 			Set<ObjectId> ignored, RevWalk revWalk, String file) throws GitAPIException {
 		
+		SimpleFileParser parser = new SimpleFileParser(file);
 		String language = FilenameToLanguage.detectLanguage(file);
 		
 		BlameResult blame = blame(repository, file, revWalk);
@@ -175,12 +179,12 @@ public class Main {
 		RawText contents = blame.getResultContents();
 		for (int i = 0; i < contents.size(); i++) {
 			String line = contents.getString(i);
-			boolean isEmptyLine = line.trim().isEmpty();
+			String lineType = toLineTypeName(parser.feedNextLine(line));
 			
 			RevCommit commit = blame.getSourceCommit(i);
 			if (commit == null) {
 				// System.out.println("  Could not blame " + file + " : " + (j + 1));
-				data.inc(1, language, isEmptyLine ? EMPTY : CODE);
+				data.inc(1, language, lineType);
 				continue;
 			}
 			
@@ -189,13 +193,24 @@ public class Main {
 			String authorName = blame.getSourceAuthor(i).getName();
 			
 			if (ignored.contains(commit.getId())) {
-				data.inc(1, language, isEmptyLine ? EMPTY : CODE, month, commit.getId().getName(),
-						IGNORED);
+				data.inc(1, language, lineType, month, commit.getId().getName(), IGNORED);
 				continue;
 			}
 			
-			data.inc(1, language, isEmptyLine ? EMPTY : CODE, month, commit.getId().getName(),
-					authorName);
+			data.inc(1, language, lineType, month, commit.getId().getName(), authorName);
+		}
+	}
+	
+	private static String toLineTypeName(LineType lineType) {
+		switch (lineType) {
+			case Empty:
+				return EMPTY;
+			case Code:
+				return CODE;
+			case Comment:
+				return COMMENT;
+			default:
+				throw new IllegalArgumentException();
 		}
 	}
 	
@@ -234,11 +249,12 @@ public class Main {
 			
 			System.out
 					.println(String
-							.format("   %s : %.1f%% of the lines: %.0f lines (%.0f code, %.0f empty) in %d commits from %s to %s", //
+							.format("   %s : %.1f%% of the lines: %.0f lines (%.0f code, %.0f comment, %.0f empty) in %d commits from %s to %s", //
 									author, //
 									percent(authorLines, totalLines), //
 									authorLines, //
 									authorData.filter(COL_LINE_TYPE, CODE).sum(), //
+									authorData.filter(COL_LINE_TYPE, COMMENT).sum(), //
 									authorData.filter(COL_LINE_TYPE, EMPTY).sum(), //
 									authorData.getDistinct(COL_COMMIT).size(), //
 									months[0], //
@@ -250,10 +266,11 @@ public class Main {
 			if (unblamableLines > 0) {
 				System.out
 						.println(String
-								.format("   Unblamable lines : %.1f%% of the lines: %.0f lines (%.0f code, %.0f empty)",
+								.format("   Unblamable lines : %.1f%% of the lines: %.0f lines (%.0f code, %.0f comment, %.0f empty)",
 										percent(unblamableLines, totalLines), //
 										unblamableLines, //
 										unblamableData.filter(COL_LINE_TYPE, CODE).sum(), //
+										unblamableData.filter(COL_LINE_TYPE, COMMENT).sum(), //
 										unblamableData.filter(COL_LINE_TYPE, EMPTY).sum()));
 			}
 		}
@@ -268,10 +285,11 @@ public class Main {
 			double monthLines = monthData.sum();
 			
 			System.out.println(String.format(
-					"   %s : %.0f lines (%.0f code, %.0f empty) in %d commits", //
+					"   %s : %.0f lines (%.0f code, %.0f comment, %.0f empty) in %d commits", //
 					month, //
 					monthLines, //
 					monthData.filter(COL_LINE_TYPE, CODE).sum(), //
+					monthData.filter(COL_LINE_TYPE, COMMENT).sum(), //
 					monthData.filter(COL_LINE_TYPE, EMPTY).sum(),//
 					monthData.getDistinct(COL_COMMIT).size()));
 		}
@@ -285,11 +303,12 @@ public class Main {
 			long unblamable = round(languageData.filter(COL_AUTHOR, "").sum());
 			
 			System.out.println(String.format(
-					"   %s : %.0f lines (%.0f code, %.0f empty) in %d commits, "
+					"   %s : %.0f lines (%.0f code, %.0f comment, %.0f empty) in %d commits, "
 							+ "from %s to %s%s", //
 					language, //
 					languageLines, //
 					languageData.filter(COL_LINE_TYPE, CODE).sum(), //
+					languageData.filter(COL_LINE_TYPE, COMMENT).sum(), //
 					languageData.filter(COL_LINE_TYPE, EMPTY).sum(), //
 					languageData.getDistinct(COL_COMMIT).size(), //
 					months[0], //

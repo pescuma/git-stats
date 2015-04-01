@@ -1,6 +1,7 @@
 package org.pescuma.gitstats;
 
-import static org.apache.commons.io.FilenameUtils.*;
+import static org.apache.commons.io.FilenameUtils.getExtension;
+import static org.apache.commons.io.FilenameUtils.getName;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -86,6 +87,7 @@ public class FilenameToLanguage {
 		extensions.put("go", "Go");
 		extensions.put("groovy", "Groovy");
 		extensions.put("gant", "Groovy");
+		extensions.put("glsl", "OpenGL Shading Language");
 		extensions.put("h", "C/C++ Header");
 		extensions.put("hh", "C/C++ Header");
 		extensions.put("hpp", "C/C++ Header");
@@ -109,7 +111,7 @@ public class FilenameToLanguage {
 		extensions.put("jl", "Lisp");
 		extensions.put("js", "Javascript");
 		extensions.put("jsf", "JavaServer Faces");
-		extensions.put("xhtml", "JavaServer Faces");
+		extensions.put("xhtml", "HTML");
 		extensions.put("jsp", "JSP");
 		extensions.put("ksc", "Kermit");
 		extensions.put("ksh", "Korn Shell");
@@ -200,6 +202,7 @@ public class FilenameToLanguage {
 		extensions.put("tpl", "Smarty");
 		extensions.put("trigger", "Apex Trigger");
 		extensions.put("txt", "Text");
+		extensions.put("tex", "Tex");
 		extensions.put("vala", "Vala");
 		extensions.put("vapi", "Vala Header");
 		extensions.put("vhd", "VHDL");
@@ -221,6 +224,8 @@ public class FilenameToLanguage {
 		extensions.put("y", "yacc");
 		extensions.put("yaml", "YAML");
 		extensions.put("yml", "YAML");
+		extensions.put("po", "GNU Gettext");
+		extensions.put("pot", "GNU Gettext");
 	};
 	
 	private static final Map<String, String> filenames = new HashMap<String, String>();
@@ -228,8 +233,8 @@ public class FilenameToLanguage {
 		filenames.put("makefile", "make");
 		filenames.put("gnumakefile", "make");
 		filenames.put("cmakelists.txt", "CMake");
-		filenames.put("build.xml", "Ant/XML");
-		filenames.put("pom.xml", "Maven/XML");
+		filenames.put("build.xml", "Ant");
+		filenames.put("pom.xml", "Maven");
 	};
 	
 	public static String detectLanguage(String filename) {
