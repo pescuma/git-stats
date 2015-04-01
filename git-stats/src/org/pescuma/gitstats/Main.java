@@ -63,12 +63,12 @@ public class Main {
 		} catch (CmdLineException e) {
 			System.out.println(e.getMessage());
 			parser.printUsage(System.out);
-			return;
+			System.exit(-1);
 		}
 		
 		parsedArgs.applyDefaults();
 		
-		run(parsedArgs);
+		System.exit(run(parsedArgs));
 	}
 	
 	private static class Args {
@@ -104,12 +104,21 @@ public class Main {
 		}
 	}
 	
-	private static void run(Args args) throws IOException, GitAPIException, InterruptedException {
+	private static int run(Args args) throws IOException, GitAPIException, InterruptedException {
 		FileRepositoryBuilder builder = new FileRepositoryBuilder();
-		final Repository repository = builder //
-				.readEnvironment() // scan environment GIT_* variables
-				.findGitDir(args.path) // scan up the file system tree
-				.build();
+		
+		final Repository repository;
+		
+		try {
+			repository = builder //
+					.readEnvironment() // scan environment GIT_* variables
+					.findGitDir(args.path) // scan up the file system tree
+					.build();
+			
+		} catch (RuntimeException e) {
+			System.out.println("You need to be inside a git repository");
+			return -1;
+		}
 		
 		RevWalk walk = new RevWalk(repository);
 		RevCommit head = walk.parseCommit(repository.resolve(Constants.HEAD));
@@ -149,6 +158,8 @@ public class Main {
 		progress.finish();
 		
 		outputStats(data);
+		
+		return 0;
 	}
 	
 	private static Map<String, String> preProcessMappings(Args args) {
