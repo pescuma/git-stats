@@ -1,6 +1,6 @@
 package org.pescuma.gitstats;
 
-import static java.lang.Math.round;
+import static java.lang.Math.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -81,6 +82,9 @@ public class Main {
 		@Option(name = "-i", aliases = { "--ignore-rev" }, usage = "Revision to ignore (can be used multiple times)")
 		public List<String> ignoredRevisions = new ArrayList<String>();
 		
+		@Option(name = "-a", aliases = { "--author" }, usage = "Authors mapping, in the format loginname=Joe User (can be used multiple times)")
+		public List<String> authors = new ArrayList<String>();
+		
 		void applyDefaults() {
 			if (path == null)
 				path = new File(".");
@@ -110,13 +114,8 @@ public class Main {
 		RevWalk walk = new RevWalk(repository);
 		RevCommit head = walk.parseCommit(repository.resolve(Constants.HEAD));
 		
-		Set<ObjectId> ignored = new HashSet<ObjectId>();
-		for (String id : args.ignoredRevisions) {
-			ObjectId rid = repository.resolve(id);
-			if (rid == null)
-				System.out.println("Could not find revision " + id);
-			ignored.add(rid);
-		}
+		Set<ObjectId> ignored = preProcessIgnored(args, repository);
+		Map<String, String> authorMappings = preProcessMappings(args);
 		
 		TreeWalk tree = new TreeWalk(repository);
 		tree.addTree(head.getTree());
@@ -138,7 +137,8 @@ public class Main {
 		new ParallelLists(args.threads).splitInThreads(files, new ParallelLists.Callback<String>() {
 			@Override
 			public void run(Iterable<String> files) throws Exception {
-				tables.add(computeAuthors(repository, ignored, files, progress));
+				tables.add(new AuthorsProcessor(repository, ignored, authorMappings)
+						.computeAuthors(files, progress));
 			}
 		});
 		
@@ -151,86 +151,129 @@ public class Main {
 		outputStats(data);
 	}
 	
-	private static DataTable computeAuthors(Repository repository, Set<ObjectId> ignored,
-			Iterable<String> files, Progress progress) throws Exception {
-		DataTable data = new MemoryDataTable();
+	private static Map<String, String> preProcessMappings(Args args) {
+		Map<String, String> authorMappings = new HashMap<String, String>();
 		
-		RevWalk revWalk = new RevWalk(repository);
+		for (String am : args.authors) {
+			int pos = am.indexOf('=');
+			authorMappings.put(am.substring(0, pos).trim(), am.substring(pos + 1).trim());
+		}
 		
-		for (String file : files) {
+		return authorMappings;
+	}
+	
+	private static Set<ObjectId> preProcessIgnored(Args args, final Repository repository)
+			throws GitAPIException, IOException {
+		Set<ObjectId> ignored = new HashSet<ObjectId>();
+		
+		for (String id : args.ignoredRevisions) {
+			ObjectId rid = repository.resolve(id);
+			if (rid == null)
+				System.out.println("Could not find revision " + id);
+			ignored.add(rid);
+		}
+		
+		return ignored;
+	}
+	
+	private static class AuthorsProcessor {
+		
+		private final Repository repository;
+		private final Set<ObjectId> ignored;
+		private final Map<String, String> authorMappings;
+		
+		public AuthorsProcessor(Repository repository, Set<ObjectId> ignored,
+				Map<String, String> authorMappings) {
+			this.repository = repository;
+			this.authorMappings = authorMappings;
+			this.ignored = ignored;
+		}
+		
+		public DataTable computeAuthors(Iterable<String> files, Progress progress)
+				throws GitAPIException {
+			DataTable data = new MemoryDataTable();
+			
+			RevWalk revWalk = new RevWalk(repository);
+			
+			for (String file : files) {
+				try {
+					computeAuthors(data, revWalk, file);
+				} finally {
+					progress.step();
+				}
+			}
+			
+			return data;
+		}
+		
+		private void computeAuthors(DataTable data, RevWalk revWalk, String file)
+				throws GitAPIException {
+			
+			SimpleFileParser parser = new SimpleFileParser(file);
+			String language = FilenameToLanguage.detectLanguage(file);
+			
+			BlameResult blame = blame(file, revWalk);
+			
+			RawText contents = blame.getResultContents();
+			for (int i = 0; i < contents.size(); i++) {
+				String line = contents.getString(i);
+				String lineType = toLineTypeName(parser.feedNextLine(line));
+				
+				RevCommit commit = blame.getSourceCommit(i);
+				if (commit == null) {
+					data.inc(1, language, lineType);
+					continue;
+				}
+				
+				int time = commit.getCommitTime();
+				String month = new SimpleDateFormat("yyyy-MM").format(new Date(time * 1000L));
+				
+				if (ignored.contains(commit.getId())) {
+					data.inc(1, language, lineType, month, commit.getId().getName(), IGNORED);
+					continue;
+				}
+				
+				String authorName = blame.getSourceAuthor(i).getName();
+				if (authorName != null) {
+					String alternateName = authorMappings.get(authorName);
+					if (alternateName != null)
+						authorName = alternateName;
+				}
+				
+				data.inc(1, language, lineType, month, commit.getId().getName(), authorName);
+			}
+		}
+		
+		private static String toLineTypeName(LineType lineType) {
+			switch (lineType) {
+				case Empty:
+					return EMPTY;
+				case Code:
+					return CODE;
+				case Comment:
+					return COMMENT;
+				default:
+					throw new IllegalArgumentException();
+			}
+		}
+		
+		private BlameResult blame(String file, RevWalk revWalk) throws GitAPIException {
+			revWalk.reset();
+			
+			BlameGenerator gen = new BlameGenerator(repository, file, revWalk, null);
 			try {
-				computeAuthors(data, repository, ignored, revWalk, file);
+				revWalk.markStart(revWalk.lookupCommit(repository.resolve(Constants.HEAD)));
+				
+				gen.setTextComparator(RawTextComparator.WS_IGNORE_ALL);
+				gen.setFollowFileRenames(true);
+				gen.push(null, repository.resolve(Constants.HEAD));
+				return gen.computeBlameResult();
+				
+			} catch (IOException e) {
+				throw new JGitInternalException(e.getMessage(), e);
 			} finally {
-				progress.step();
+				gen.dispose();
 			}
-		}
-		
-		return data;
-	}
-	
-	private static void computeAuthors(DataTable data, Repository repository,
-			Set<ObjectId> ignored, RevWalk revWalk, String file) throws GitAPIException {
-		
-		SimpleFileParser parser = new SimpleFileParser(file);
-		String language = FilenameToLanguage.detectLanguage(file);
-		
-		BlameResult blame = blame(repository, file, revWalk);
-		
-		RawText contents = blame.getResultContents();
-		for (int i = 0; i < contents.size(); i++) {
-			String line = contents.getString(i);
-			String lineType = toLineTypeName(parser.feedNextLine(line));
-			
-			RevCommit commit = blame.getSourceCommit(i);
-			if (commit == null) {
-				// System.out.println("  Could not blame " + file + " : " + (j + 1));
-				data.inc(1, language, lineType);
-				continue;
-			}
-			
-			int time = commit.getCommitTime();
-			String month = new SimpleDateFormat("yyyy-MM").format(new Date(time * 1000L));
-			String authorName = blame.getSourceAuthor(i).getName();
-			
-			if (ignored.contains(commit.getId())) {
-				data.inc(1, language, lineType, month, commit.getId().getName(), IGNORED);
-				continue;
-			}
-			
-			data.inc(1, language, lineType, month, commit.getId().getName(), authorName);
-		}
-	}
-	
-	private static String toLineTypeName(LineType lineType) {
-		switch (lineType) {
-			case Empty:
-				return EMPTY;
-			case Code:
-				return CODE;
-			case Comment:
-				return COMMENT;
-			default:
-				throw new IllegalArgumentException();
-		}
-	}
-	
-	private static BlameResult blame(Repository repository, String file, RevWalk revWalk)
-			throws GitAPIException {
-		revWalk.reset();
-		
-		BlameGenerator gen = new BlameGenerator(repository, file, revWalk, null);
-		try {
-			revWalk.markStart(revWalk.lookupCommit(repository.resolve(Constants.HEAD)));
-			
-			gen.setTextComparator(RawTextComparator.WS_IGNORE_ALL);
-			gen.setFollowFileRenames(true);
-			gen.push(null, repository.resolve(Constants.HEAD));
-			return gen.computeBlameResult();
-			
-		} catch (IOException e) {
-			throw new JGitInternalException(e.getMessage(), e);
-		} finally {
-			gen.dispose();
 		}
 	}
 	
