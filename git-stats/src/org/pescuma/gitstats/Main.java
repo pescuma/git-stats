@@ -14,6 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.LogManager;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.JGitInternalException;
@@ -50,10 +51,12 @@ public class Main {
 	private static final String CODE = "Code";
 	private static final String COMMENT = "Comment";
 	
-	private static final String IGNORED = "Ignored";
+	private static final String IGNORED = "<Ignored>";
 	
 	public static void main(String[] args) throws IOException, GitAPIException,
 			InterruptedException {
+		disableLogger();
+		
 		Args parsedArgs = new Args();
 		CmdLineParser parser = new CmdLineParser(parsedArgs);
 		try {
@@ -69,6 +72,10 @@ public class Main {
 		parsedArgs.applyDefaults();
 		
 		System.exit(run(parsedArgs));
+	}
+	
+	private static void disableLogger() {
+		LogManager.getLogManager().reset();
 	}
 	
 	private static class Args {
