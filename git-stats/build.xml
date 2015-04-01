@@ -1,7 +1,7 @@
 <project name="git-stats" default="all">
 
 	<property name="project" value="git-stats" />
-	<property name="version" value="0.1" />
+	<property name="version" value="0.3" />
 
 	<import file="ivy.xml" />
 	<import file="project.xml" />
@@ -40,6 +40,7 @@
 
 		<delete file="${build.tmp.dir}/about.html" quiet="true" />
 		<delete file="${build.tmp.dir}/plugin.properties" quiet="true" />
+		<delete dir="${build.tmp.dir}/META-INF" includes="*" quiet="true" />
 
 		<delete dir="${build.dir}" includes="git-stats.full*.jar" quiet="true" />
 
@@ -53,7 +54,7 @@
 	</target>
 
 	<target name="onejar.proguard">
-		<taskdef resource="proguard/ant/task.properties" classpath="${basedir}/lib/build/proguard-4.9.jar" />
+		<taskdef resource="proguard/ant/task.properties" classpath="${basedir}/lib/build/proguard-5.2.1.jar" />
 
 		<delete file="${build.dir}/git-stats-${version}.jar" quiet="true" />
 
@@ -81,7 +82,7 @@
 	<target name="wrap" if="isWindows">
 		<taskdef name="launch4j"
 		         classname="net.sf.launch4j.ant.Launch4jTask"
-		         classpath="${basedir}/lib/build/launch4j/launch4j.jar:${basedir}/lib/build/launch4j/lib/xstream.jar" />
+		         classpath="${basedir}/lib/build/launch4j-3.7/launch4j.jar:${basedir}/lib/build/launch4j-3.7/lib/xstream.jar" />
 
 		<launch4j>
 			<config headerType="console"
