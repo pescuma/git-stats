@@ -21,7 +21,7 @@ import org.pescuma.gitstats.SimpleFileParser.LineType;
 import org.pescuma.gitstats.blame.BlameGenerator;
 import org.pescuma.gitstats.blame.BlameResult;
 
-class AuthorsProcessor {
+public class AuthorsProcessor {
 	
 	private final Repository repository;
 	private final Set<ObjectId> ignored;
@@ -74,7 +74,7 @@ class AuthorsProcessor {
 			String month = new SimpleDateFormat("yyyy-MM").format(new Date(time * 1000L));
 			
 			if (ignored.contains(commit.getId())) {
-				data.inc(1, language, lineType, month, commit.getId().getName(), Main.IGNORED);
+				data.inc(1, language, lineType, month, commit.getId().getName(), Consts.IGNORED);
 				continue;
 			}
 			
@@ -92,11 +92,11 @@ class AuthorsProcessor {
 	private static String toLineTypeName(LineType lineType) {
 		switch (lineType) {
 			case Empty:
-				return Main.EMPTY;
+				return Consts.EMPTY;
 			case Code:
-				return Main.CODE;
+				return Consts.CODE;
 			case Comment:
-				return Main.COMMENT;
+				return Consts.COMMENT;
 			default:
 				throw new IllegalArgumentException();
 		}
