@@ -34,7 +34,15 @@ public class Main {
 		} catch (CmdLineException e) {
 			System.out.println(e.getMessage());
 			parser.printUsage(System.out);
+			System.out.println();
 			System.exit(-1);
+		}
+		
+		if (parsedArgs.showHelp) {
+			System.out.println("git stats [options...] arguments...");
+			parser.printUsage(System.out);
+			System.out.println();
+			return;
 		}
 		
 		System.exit(run(parsedArgs));
