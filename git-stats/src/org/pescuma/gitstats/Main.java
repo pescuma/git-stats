@@ -4,11 +4,9 @@ import static java.lang.Math.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -17,9 +15,6 @@ import java.util.Set;
 import java.util.logging.LogManager;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.api.errors.JGitInternalException;
-import org.eclipse.jgit.diff.RawText;
-import org.eclipse.jgit.diff.RawTextComparator;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
@@ -34,9 +29,6 @@ import org.kohsuke.args4j.Option;
 import org.pescuma.datatable.DataTable;
 import org.pescuma.datatable.DataTable.Value;
 import org.pescuma.datatable.MemoryDataTable;
-import org.pescuma.gitstats.SimpleFileParser.LineType;
-import org.pescuma.gitstats.blame.BlameGenerator;
-import org.pescuma.gitstats.blame.BlameResult;
 import org.pescuma.gitstats.threads.ParallelLists;
 
 public class Main {
@@ -47,11 +39,11 @@ public class Main {
 	private static final int COL_COMMIT = 3;
 	private static final int COL_AUTHOR = 4;
 	
-	private static final String EMPTY = "Empty";
-	private static final String CODE = "Code";
-	private static final String COMMENT = "Comment";
+	static final String EMPTY = "Empty";
+	static final String CODE = "Code";
+	static final String COMMENT = "Comment";
 	
-	private static final String IGNORED = "<Ignored>";
+	static final String IGNORED = "<Ignored>";
 	
 	public static void main(String[] args) throws IOException, GitAPIException,
 			InterruptedException {
@@ -80,8 +72,8 @@ public class Main {
 	
 	private static class Args {
 		
-		@Argument(required = false, usage = "Path with git repository")
-		public File path;
+		@Argument(required = false, usage = "Path(s) with git repository. If not expecified, it uses the current directory.")
+		public List<File> paths = new ArrayList<File>();
 		
 		@Option(name = "-t", aliases = { "--threads" }, usage = "Number of threads (by default it creates one thread per processor)")
 		public int threads;
@@ -93,14 +85,11 @@ public class Main {
 		public List<String> authors = new ArrayList<String>();
 		
 		void applyDefaults() {
-			if (path == null)
-				path = new File(".");
+			if (paths.isEmpty())
+				paths.add(new File("."));
 			
-			try {
-				path = path.getCanonicalFile();
-			} catch (IOException e) {
-				path = path.getAbsoluteFile();
-			}
+			for (int i = 0; i < paths.size(); i++)
+				paths.set(i, getCanonical(paths.get(i)));
 			
 			if (threads < 1) {
 				threads = Runtime.getRuntime().availableProcessors();
@@ -109,9 +98,31 @@ public class Main {
 					threads--;
 			}
 		}
+		
+		private File getCanonical(File file) {
+			try {
+				return file.getCanonicalFile();
+			} catch (IOException e) {
+				return file.getAbsoluteFile();
+			}
+		}
 	}
 	
 	private static int run(Args args) throws IOException, GitAPIException, InterruptedException {
+		DataTable data = new MemoryDataTable();
+		
+		for (File path : args.paths) {
+			System.out.println("Processing " + path.getAbsolutePath());
+			processRepository(data, args, path);
+		}
+		
+		outputStats(data);
+		
+		return 0;
+	}
+	
+	private static void processRepository(DataTable data, Args args, File path) throws IOException,
+			GitAPIException {
 		FileRepositoryBuilder builder = new FileRepositoryBuilder();
 		
 		final Repository repository;
@@ -119,12 +130,12 @@ public class Main {
 		try {
 			repository = builder //
 					.readEnvironment() // scan environment GIT_* variables
-					.findGitDir(args.path) // scan up the file system tree
+					.findGitDir(path) // scan up the file system tree
 					.build();
 			
 		} catch (RuntimeException e) {
-			System.out.println("You need to be inside a git repository");
-			return -1;
+			System.out.println(path.getAbsolutePath() + " is not a git repository");
+			return;
 		}
 		
 		RevWalk walk = new RevWalk(repository);
@@ -158,15 +169,10 @@ public class Main {
 			}
 		});
 		
-		DataTable data = new MemoryDataTable();
 		for (DataTable d : tables)
 			data.inc(d);
 		
 		progress.finish();
-		
-		outputStats(data);
-		
-		return 0;
 	}
 	
 	private static Map<String, String> preProcessMappings(Args args) {
@@ -192,107 +198,6 @@ public class Main {
 		}
 		
 		return ignored;
-	}
-	
-	private static class AuthorsProcessor {
-		
-		private final Repository repository;
-		private final Set<ObjectId> ignored;
-		private final Map<String, String> authorMappings;
-		
-		public AuthorsProcessor(Repository repository, Set<ObjectId> ignored,
-				Map<String, String> authorMappings) {
-			this.repository = repository;
-			this.authorMappings = authorMappings;
-			this.ignored = ignored;
-		}
-		
-		public DataTable computeAuthors(Iterable<String> files, Progress progress)
-				throws GitAPIException {
-			DataTable data = new MemoryDataTable();
-			
-			RevWalk revWalk = new RevWalk(repository);
-			
-			for (String file : files) {
-				try {
-					computeAuthors(data, revWalk, file);
-				} finally {
-					progress.step();
-				}
-			}
-			
-			return data;
-		}
-		
-		private void computeAuthors(DataTable data, RevWalk revWalk, String file)
-				throws GitAPIException {
-			
-			SimpleFileParser parser = new SimpleFileParser(file);
-			String language = FilenameToLanguage.detectLanguage(file);
-			
-			BlameResult blame = blame(file, revWalk);
-			
-			RawText contents = blame.getResultContents();
-			for (int i = 0; i < contents.size(); i++) {
-				String line = contents.getString(i);
-				String lineType = toLineTypeName(parser.feedNextLine(line));
-				
-				RevCommit commit = blame.getSourceCommit(i);
-				if (commit == null) {
-					data.inc(1, language, lineType);
-					continue;
-				}
-				
-				int time = commit.getCommitTime();
-				String month = new SimpleDateFormat("yyyy-MM").format(new Date(time * 1000L));
-				
-				if (ignored.contains(commit.getId())) {
-					data.inc(1, language, lineType, month, commit.getId().getName(), IGNORED);
-					continue;
-				}
-				
-				String authorName = blame.getSourceAuthor(i).getName();
-				if (authorName != null) {
-					String alternateName = authorMappings.get(authorName);
-					if (alternateName != null)
-						authorName = alternateName;
-				}
-				
-				data.inc(1, language, lineType, month, commit.getId().getName(), authorName);
-			}
-		}
-		
-		private static String toLineTypeName(LineType lineType) {
-			switch (lineType) {
-				case Empty:
-					return EMPTY;
-				case Code:
-					return CODE;
-				case Comment:
-					return COMMENT;
-				default:
-					throw new IllegalArgumentException();
-			}
-		}
-		
-		private BlameResult blame(String file, RevWalk revWalk) throws GitAPIException {
-			revWalk.reset();
-			
-			BlameGenerator gen = new BlameGenerator(repository, file, revWalk, null);
-			try {
-				revWalk.markStart(revWalk.lookupCommit(repository.resolve(Constants.HEAD)));
-				
-				gen.setTextComparator(RawTextComparator.WS_IGNORE_ALL);
-				gen.setFollowFileRenames(true);
-				gen.push(null, repository.resolve(Constants.HEAD));
-				return gen.computeBlameResult();
-				
-			} catch (IOException e) {
-				throw new JGitInternalException(e.getMessage(), e);
-			} finally {
-				gen.dispose();
-			}
-		}
 	}
 	
 	private static void outputStats(DataTable data) {
