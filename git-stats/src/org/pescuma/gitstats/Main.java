@@ -12,10 +12,8 @@ import java.util.Map;
 import java.util.logging.LogManager;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
-import org.kohsuke.args4j.Option;
 import org.pescuma.datatable.DataTable;
 import org.pescuma.datatable.DataTable.Value;
 import org.pescuma.datatable.DataTableSerialization;
@@ -39,8 +37,6 @@ public class Main {
 			System.exit(-1);
 		}
 		
-		parsedArgs.applyDefaults();
-		
 		System.exit(run(parsedArgs));
 	}
 	
@@ -48,79 +44,28 @@ public class Main {
 		LogManager.getLogManager().reset();
 	}
 	
-	static class Args {
-		
-		@Argument(required = false, usage = "Path(s) with git repository. If not expecified, it uses the current directory.")
-		public List<File> paths = new ArrayList<File>();
-		
-		@Option(name = "-t", aliases = { "--threads" }, usage = "Number of threads (by default it creates one thread per processor)")
-		public int threads;
-		
-		@Option(name = "-i", aliases = { "--ignore-rev" }, usage = "Revision to ignore (can be used multiple times)")
-		public List<String> ignoredRevisions = new ArrayList<String>();
-		
-		@Option(name = "-a", aliases = { "--author" }, usage = "Authors mapping, in the format loginname=Joe User (can be used multiple times)")
-		public List<String> authors = new ArrayList<String>();
-		
-		@Option(name = "-o", aliases = { "--output" }, usage = "How to show output. It can be console or a file name. The format is based on its extension. Supported extensions: csv (can be used multiple times)")
-		public List<String> outputs = new ArrayList<String>();
-		
-		void applyDefaults() {
-			if (paths.isEmpty())
-				paths.add(new File("."));
-			
-			for (int i = 0; i < paths.size(); i++)
-				paths.set(i, getCanonical(paths.get(i)));
-			
-			if (outputs.isEmpty())
-				outputs.add("console");
-			
-			for (int i = 0; i < outputs.size(); i++) {
-				String output = outputs.get(i);
-				if (!isConsole(output))
-					outputs.set(i, getCanonical(outputs.get(i)));
-			}
-			
-			if (threads < 1) {
-				threads = Runtime.getRuntime().availableProcessors();
-				if (threads >= 4)
-					// Some room for breathing
-					threads--;
-			}
-		}
-		
-		private File getCanonical(File file) {
-			try {
-				return file.getCanonicalFile();
-			} catch (IOException e) {
-				return file.getAbsoluteFile();
-			}
-		}
-		
-		private String getCanonical(String file) {
-			try {
-				return new File(file).getCanonicalPath();
-			} catch (IOException e) {
-				return new File(file).getAbsolutePath();
-			}
-		}
-	}
-	
 	private static int run(Args args) throws IOException, GitAPIException, InterruptedException {
+		args.applyDefaults();
+		
 		DataTable data = new MemoryDataTable();
 		
 		for (File path : args.paths) {
 			System.out.println("Processing " + path.getAbsolutePath());
-			new RepositoryProcessor().process(data, args, path);
+			
+			if (path.isFile() && path.getName().endsWith(".csv"))
+				DataTableSerialization.loadFromCSV(data, path);
+			else
+				RepositoryProcessor.process(data, args, path);
 		}
 		
+		System.out.println();
+		
 		for (String output : args.outputs) {
-			if (isConsole(output))
+			if (Args.isConsole(output))
 				outputStatsToConsole(data);
 			
 			else if (output.endsWith(".csv"))
-				DataTableSerialization.saveAsCSV(data, new File(output), false);
-			
+				outputStatsToCSV(data, output);
 			else
 				System.out.println("Unknown output format: " + output);
 		}
@@ -128,14 +73,17 @@ public class Main {
 		return 0;
 	}
 	
-	private static boolean isConsole(String output) {
-		return output.equalsIgnoreCase("console");
+	private static void outputStatsToCSV(DataTable data, String output) {
+		System.out.println("Writing output to " + output);
+		
+		DataTableSerialization.saveAsCSV(data, new File(output), false);
+		
+		System.out.println();
 	}
 	
 	private static void outputStatsToConsole(DataTable data) {
 		double totalLines = data.sum();
 		
-		System.out.println();
 		System.out.println("Authors:");
 		for (String author : sortedByLines(data, Consts.COL_AUTHOR)) {
 			if (author.isEmpty())
@@ -216,6 +164,8 @@ public class Main {
 					months[1], //
 					unblamable > 0 ? String.format("(%d umblamable)", unblamable) : ""));
 		}
+		
+		System.out.println();
 	}
 	
 	private static double percent(double count, double total) {

@@ -19,12 +19,12 @@ import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.pescuma.datatable.DataTable;
-import org.pescuma.gitstats.Main.Args;
 import org.pescuma.gitstats.threads.ParallelLists;
 
 public class RepositoryProcessor {
 	
-	public void process(DataTable data, Args args, File path) throws IOException, GitAPIException {
+	public static void process(DataTable data, Args args, File path) throws IOException,
+			GitAPIException {
 		FileRepositoryBuilder builder = new FileRepositoryBuilder();
 		
 		final Repository repository;
