@@ -18,6 +18,7 @@ import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.pescuma.datatable.DataTable;
 import org.pescuma.datatable.DataTable.Value;
+import org.pescuma.datatable.DataTableSerialization;
 import org.pescuma.datatable.MemoryDataTable;
 
 public class Main {
@@ -61,12 +62,24 @@ public class Main {
 		@Option(name = "-a", aliases = { "--author" }, usage = "Authors mapping, in the format loginname=Joe User (can be used multiple times)")
 		public List<String> authors = new ArrayList<String>();
 		
+		@Option(name = "-o", aliases = { "--output" }, usage = "How to show output. It can be console or a file name. The format is based on its extension. Supported extensions: csv (can be used multiple times)")
+		public List<String> outputs = new ArrayList<String>();
+		
 		void applyDefaults() {
 			if (paths.isEmpty())
 				paths.add(new File("."));
 			
 			for (int i = 0; i < paths.size(); i++)
 				paths.set(i, getCanonical(paths.get(i)));
+			
+			if (outputs.isEmpty())
+				outputs.add("console");
+			
+			for (int i = 0; i < outputs.size(); i++) {
+				String output = outputs.get(i);
+				if (!isConsole(output))
+					outputs.set(i, getCanonical(outputs.get(i)));
+			}
 			
 			if (threads < 1) {
 				threads = Runtime.getRuntime().availableProcessors();
@@ -83,6 +96,14 @@ public class Main {
 				return file.getAbsoluteFile();
 			}
 		}
+		
+		private String getCanonical(String file) {
+			try {
+				return new File(file).getCanonicalPath();
+			} catch (IOException e) {
+				return new File(file).getAbsolutePath();
+			}
+		}
 	}
 	
 	private static int run(Args args) throws IOException, GitAPIException, InterruptedException {
@@ -93,12 +114,25 @@ public class Main {
 			new RepositoryProcessor().process(data, args, path);
 		}
 		
-		outputStats(data);
+		for (String output : args.outputs) {
+			if (isConsole(output))
+				outputStatsToConsole(data);
+			
+			else if (output.endsWith(".csv"))
+				DataTableSerialization.saveAsCSV(data, new File(output), false);
+			
+			else
+				System.out.println("Unknown output format: " + output);
+		}
 		
 		return 0;
 	}
 	
-	private static void outputStats(DataTable data) {
+	private static boolean isConsole(String output) {
+		return output.equalsIgnoreCase("console");
+	}
+	
+	private static void outputStatsToConsole(DataTable data) {
 		double totalLines = data.sum();
 		
 		System.out.println();
@@ -117,12 +151,9 @@ public class Main {
 									author, //
 									percent(authorLines, totalLines), //
 									authorLines, //
-									authorData.filter(Consts.COL_LINE_TYPE, Consts.CODE)
-											.sum(), //
-									authorData.filter(Consts.COL_LINE_TYPE, Consts.COMMENT)
-											.sum(), //
-									authorData.filter(Consts.COL_LINE_TYPE, Consts.EMPTY)
-											.sum(), //
+									authorData.filter(Consts.COL_LINE_TYPE, Consts.CODE).sum(), //
+									authorData.filter(Consts.COL_LINE_TYPE, Consts.COMMENT).sum(), //
+									authorData.filter(Consts.COL_LINE_TYPE, Consts.EMPTY).sum(), //
 									authorData.getDistinct(Consts.COL_COMMIT).size(), //
 									months[0], //
 									months[1]));
@@ -136,12 +167,12 @@ public class Main {
 								.format("   Unblamable lines : %.1f%% of the lines: %.0f lines (%.0f code, %.0f comment, %.0f empty)",
 										percent(unblamableLines, totalLines), //
 										unblamableLines, //
-										unblamableData.filter(Consts.COL_LINE_TYPE,
-												Consts.CODE).sum(), //
-										unblamableData.filter(Consts.COL_LINE_TYPE,
-												Consts.COMMENT).sum(), //
-										unblamableData.filter(Consts.COL_LINE_TYPE,
-												Consts.EMPTY).sum()));
+										unblamableData.filter(Consts.COL_LINE_TYPE, Consts.CODE)
+												.sum(), //
+										unblamableData.filter(Consts.COL_LINE_TYPE, Consts.COMMENT)
+												.sum(), //
+										unblamableData.filter(Consts.COL_LINE_TYPE, Consts.EMPTY)
+												.sum()));
 			}
 		}
 		
