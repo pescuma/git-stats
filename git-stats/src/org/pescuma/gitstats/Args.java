@@ -28,6 +28,9 @@ public class Args {
 	@Option(name = "--output", aliases = { "-o" }, usage = "How to show output. It can be console or a file name. The format is based on its extension. Supported extensions: csv (can be used multiple times)")
 	public List<String> outputs = new ArrayList<String>();
 	
+	@Option(name = "--exclude-path", aliases = { "-ep" }, usage = "Exclude from process all files inside this path (can be used multiple times)")
+	public List<String> excludePaths = new ArrayList<String>();
+	
 	void applyDefaults() {
 		if (paths.isEmpty())
 			paths.add(new File("."));
@@ -42,6 +45,13 @@ public class Args {
 			String output = outputs.get(i);
 			if (!isConsole(output))
 				outputs.set(i, getCanonical(outputs.get(i)));
+		}
+		
+		for (int i = 0; i < excludePaths.size(); i++) {
+			String canonical = getCanonical(excludePaths.get(i));
+			if (!canonical.endsWith(File.separator))
+				canonical += File.separator;
+			excludePaths.set(i, canonical);
 		}
 		
 		if (threads < 1) {

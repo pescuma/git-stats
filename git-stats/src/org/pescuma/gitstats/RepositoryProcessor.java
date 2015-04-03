@@ -54,10 +54,13 @@ public class RepositoryProcessor {
 		List<String> files = new ArrayList<String>();
 		while (tree.next()) {
 			String file = tree.getPathString();
-			if (!FilenameToLanguage.isKnownFileType(file)) {
-				// System.out.println("Skipping " + file + " ...");
+			
+			if (isInExcludedPath(repository, file, args))
 				continue;
-			}
+			
+			if (!FilenameToLanguage.isKnownFileType(file))
+				continue;
+			
 			files.add(file);
 		}
 		
@@ -76,6 +79,20 @@ public class RepositoryProcessor {
 			data.inc(d);
 		
 		progress.finish();
+	}
+	
+	private static boolean isInExcludedPath(final Repository repository, String file, Args args) {
+		if (args.excludePaths.isEmpty())
+			return false;
+		
+		String absolute = new File(repository.getWorkTree(), file).getAbsolutePath();
+		for (String excluded : args.excludePaths) {
+			if (absolute.startsWith(excluded))
+				return true;
+			;
+		}
+		
+		return false;
 	}
 	
 	private static Map<String, String> preProcessMappings(Args args) {
