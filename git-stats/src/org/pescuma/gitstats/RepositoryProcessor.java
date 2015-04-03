@@ -20,6 +20,7 @@ import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.pescuma.datatable.DataTable;
 import org.pescuma.gitstats.threads.ParallelLists;
+import org.pescuma.programminglanguagedetector.FilenameToLanguage;
 
 public class RepositoryProcessor {
 	

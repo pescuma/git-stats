@@ -17,9 +17,11 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.pescuma.datatable.DataTable;
 import org.pescuma.datatable.MemoryDataTable;
-import org.pescuma.gitstats.SimpleFileParser.LineType;
 import org.pescuma.gitstats.blame.BlameGenerator;
 import org.pescuma.gitstats.blame.BlameResult;
+import org.pescuma.programminglanguagedetector.FilenameToLanguage;
+import org.pescuma.programminglanguagedetector.SimpleFileParser;
+import org.pescuma.programminglanguagedetector.SimpleFileParser.LineType;
 
 public class AuthorsProcessor {
 	
@@ -54,8 +56,9 @@ public class AuthorsProcessor {
 	private void computeAuthors(DataTable data, RevWalk revWalk, String file)
 			throws GitAPIException {
 		
-		SimpleFileParser parser = new SimpleFileParser(file);
 		String language = FilenameToLanguage.detectLanguage(file);
+		
+		SimpleFileParser parser = new SimpleFileParser(language);
 		
 		BlameResult blame = blame(file, revWalk);
 		

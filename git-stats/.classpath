@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="src" path="tests"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/auto/compile/hamcrest-core-1.3-jar.jar"/>
 	<classpathentry kind="lib" path="lib/auto/compile/opencsv-2.3-jar.jar" sourcepath="lib/auto/compile/opencsv-2.3-source.jar"/>
@@ -19,5 +18,7 @@
 	<classpathentry kind="lib" path="lib/auto/compile/slf4j-api-1.7.12-jar.jar" sourcepath="lib/auto/compile/slf4j-api-1.7.12-source.jar"/>
 	<classpathentry kind="lib" path="lib/auto/compile/slf4j-jdk14-1.7.12-jar.jar" sourcepath="lib/auto/compile/slf4j-jdk14-1.7.12-source.jar"/>
 	<classpathentry kind="lib" path="lib/auto/compile/commons-lang3-3.3.2-jar.jar" sourcepath="lib/auto/compile/commons-lang3-3.3.2-source.jar"/>
+	<classpathentry kind="lib" path="lib/auto/compile/datatable-0.1-jar.jar" sourcepath="lib/auto/compile/datatable-0.1-source.jar"/>
+	<classpathentry kind="lib" path="lib/auto/compile/programming-language-detector-0.2-jar.jar" sourcepath="lib/auto/compile/programming-language-detector-0.2-source.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
