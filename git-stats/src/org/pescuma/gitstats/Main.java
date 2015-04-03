@@ -18,6 +18,7 @@ import org.pescuma.datatable.DataTable;
 import org.pescuma.datatable.DataTable.Value;
 import org.pescuma.datatable.DataTableSerialization;
 import org.pescuma.datatable.MemoryDataTable;
+import org.pescuma.gitstats.ColumnsOutput.Align;
 
 public class Main {
 	
@@ -93,6 +94,7 @@ public class Main {
 		double totalLines = data.sum();
 		
 		System.out.println("Authors:");
+		ColumnsOutput out = new ColumnsOutput();
 		for (String author : sortedByLines(data, Consts.COL_AUTHOR)) {
 			if (author.isEmpty())
 				continue;
@@ -101,79 +103,91 @@ public class Main {
 			String[] months = getMonthRange(authorData);
 			double authorLines = authorData.sum();
 			
-			System.out
-					.println(String
-							.format("   %s : %.1f%% of the lines: %.0f lines (%.0f code, %.0f comment, %.0f empty) in %d commits from %s to %s", //
-									author, //
-									percent(authorLines, totalLines), //
-									authorLines, //
-									authorData.filter(Consts.COL_LINE_TYPE, Consts.CODE).sum(), //
-									authorData.filter(Consts.COL_LINE_TYPE, Consts.COMMENT).sum(), //
-									authorData.filter(Consts.COL_LINE_TYPE, Consts.EMPTY).sum(), //
-									authorData.getDistinct(Consts.COL_COMMIT).size(), //
-									months[0], //
-									months[1]));
+			out.appendColumn("   ").appendColumn(author).appendColumn(" : ")
+					.appendColumn(Align.Right, "%.1f%%", percent(authorLines, totalLines))
+					.appendColumn(" of the lines: ");
+			
+			appendLines(out, authorData, authorLines);
+			
+			out.appendColumn(" in ").appendColumn(authorData.getDistinct(Consts.COL_COMMIT).size())
+					.appendColumn(" commits from ").appendColumn(months[0]).appendColumn(" to ")
+					.appendColumn(months[1]);
+			
+			out.newLine();
 		}
 		{
 			DataTable unblamableData = data.filter(Consts.COL_AUTHOR, "");
 			double unblamableLines = unblamableData.sum();
 			if (unblamableLines > 0) {
-				System.out
-						.println(String
-								.format("   Unblamable lines : %.1f%% of the lines: %.0f lines (%.0f code, %.0f comment, %.0f empty)",
-										percent(unblamableLines, totalLines), //
-										unblamableLines, //
-										unblamableData.filter(Consts.COL_LINE_TYPE, Consts.CODE)
-												.sum(), //
-										unblamableData.filter(Consts.COL_LINE_TYPE, Consts.COMMENT)
-												.sum(), //
-										unblamableData.filter(Consts.COL_LINE_TYPE, Consts.EMPTY)
-												.sum()));
+				out.appendColumn("   ").appendColumn("Unblamable lines").appendColumn(" : ")
+						.appendColumn(Align.Right, "%.1f%%", percent(unblamableLines, totalLines))
+						.appendColumn(" of the lines: ");
+				
+				appendLines(out, unblamableData, unblamableLines);
+				
+				out.newLine();
 			}
 		}
-		
+		out.print(System.out);
 		System.out.println();
+		
 		System.out.println("Months:");
+		out = new ColumnsOutput();
 		for (String month : data.getDistinct(Consts.COL_MONTH)) {
 			if (month.isEmpty())
 				continue;
 			
 			DataTable monthData = data.filter(Consts.COL_MONTH, month);
-			double monthLines = monthData.sum();
 			
-			System.out.println(String.format(
-					"   %s : %.0f lines (%.0f code, %.0f comment, %.0f empty) in %d commits", //
-					month, //
-					monthLines, //
-					monthData.filter(Consts.COL_LINE_TYPE, Consts.CODE).sum(), //
-					monthData.filter(Consts.COL_LINE_TYPE, Consts.COMMENT).sum(), //
-					monthData.filter(Consts.COL_LINE_TYPE, Consts.EMPTY).sum(),//
-					monthData.getDistinct(Consts.COL_COMMIT).size()));
+			out.appendColumn("   ").appendColumn(month).appendColumn(" : ")
+					.appendColumn(" lines: ");
+			
+			appendLines(out, monthData);
+			
+			out.appendColumn(" in ").appendColumn(monthData.getDistinct(Consts.COL_COMMIT).size())
+					.appendColumn(" commits");
+			
+			out.newLine();
 		}
-		
+		out.print(System.out);
 		System.out.println();
+		
 		System.out.println("Languages:");
+		out = new ColumnsOutput();
 		for (String language : sortedByLines(data, Consts.COL_LANGUAGE)) {
 			DataTable languageData = data.filter(Consts.COL_LANGUAGE, language);
 			String[] months = getMonthRange(languageData);
-			double languageLines = languageData.sum();
 			long unblamable = round(languageData.filter(Consts.COL_AUTHOR, "").sum());
 			
-			System.out.println(String.format(
-					"   %s : %.0f lines (%.0f code, %.0f comment, %.0f empty) in %d commits, "
-							+ "from %s to %s%s", //
-					language, //
-					languageLines, //
-					languageData.filter(Consts.COL_LINE_TYPE, Consts.CODE).sum(), //
-					languageData.filter(Consts.COL_LINE_TYPE, Consts.COMMENT).sum(), //
-					languageData.filter(Consts.COL_LINE_TYPE, Consts.EMPTY).sum(), //
-					languageData.getDistinct(Consts.COL_COMMIT).size(), //
-					months[0], //
-					months[1], //
-					unblamable > 0 ? String.format("(%d umblamable)", unblamable) : ""));
+			out.appendColumn("   ").appendColumn(language).appendColumn(" : ")
+					.appendColumn(" lines: ");
+			appendLines(out, languageData);
+			out.appendColumn(" in ")
+					.appendColumn(languageData.getDistinct(Consts.COL_COMMIT).size())
+					.appendColumn(" commits from ").appendColumn(months[0]).appendColumn(" to ")
+					.appendColumn(months[1]);
+			
+			if (unblamable > 0)
+				out.appendColumn(" (").appendColumn((int) unblamable).appendColumn(" umblamable)");
+			
+			out.newLine();
 		}
-		
+		out.print(System.out);
 		System.out.println();
+	}
+	
+	private static void appendLines(ColumnsOutput out, DataTable data) {
+		appendLines(out, data, data.sum());
+	}
+	
+	private static void appendLines(ColumnsOutput out, DataTable data, double total) {
+		out.appendColumn((int) total).appendColumn(" lines (")
+				.appendColumn((int) data.filter(Consts.COL_LINE_TYPE, Consts.CODE).sum())
+				.appendColumn(" code, ")
+				.appendColumn((int) data.filter(Consts.COL_LINE_TYPE, Consts.COMMENT).sum())
+				.appendColumn(" comment, ")
+				.appendColumn((int) data.filter(Consts.COL_LINE_TYPE, Consts.EMPTY).sum())
+				.appendColumn(" empty)");
 	}
 	
 	private static double percent(double count, double total) {
