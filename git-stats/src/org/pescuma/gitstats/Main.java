@@ -139,8 +139,7 @@ public class Main {
 			
 			DataTable monthData = data.filter(Consts.COL_MONTH, month);
 			
-			out.appendColumn("   ").appendColumn(month).appendColumn(" : ")
-					.appendColumn(" lines: ");
+			out.appendColumn("   ").appendColumn(month).appendColumn(" : ");
 			
 			appendLines(out, monthData);
 			
@@ -159,8 +158,7 @@ public class Main {
 			String[] months = getMonthRange(languageData);
 			long unblamable = round(languageData.filter(Consts.COL_AUTHOR, "").sum());
 			
-			out.appendColumn("   ").appendColumn(language).appendColumn(" : ")
-					.appendColumn(" lines: ");
+			out.appendColumn("   ").appendColumn(language).appendColumn(" : ");
 			appendLines(out, languageData);
 			out.appendColumn(" in ")
 					.appendColumn(languageData.getDistinct(Consts.COL_COMMIT).size())
