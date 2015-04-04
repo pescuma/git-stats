@@ -2,9 +2,9 @@
 <ivy-module version="2.0" xmlns:e="http://ant.apache.org/ivy/extra">
 	<info organisation="org.pescuma" module="git-stats" />
 
-	<configurations defaultconfmapping="compile->default,sources;default->default;sources->sources">
+	<configurations defaultconfmapping="compile->default,sources;runtime->default;sources->sources">
 		<conf name="compile" visibility="private" />
-		<conf name="default" />
+		<conf name="runtime" />
 		<conf name="sources" />
 	</configurations>
 
@@ -26,9 +26,9 @@
 
 		<dependency org="org.eclipse.jgit" name="org.eclipse.jgit" rev="3.7.0.201502260915-r" />
 
-		<dependency org="junit" name="junit" rev="4.12" conf="compile" />
-
 		<dependency org="org.slf4j" name="slf4j-api" rev="1.7.12" />
 		<dependency org="org.slf4j" name="slf4j-jdk14" rev="1.7.12" />
+
+		<dependency org="junit" name="junit" rev="4.12" conf="compile" />
 	</dependencies>
 </ivy-module>

@@ -12,20 +12,20 @@ It will run `git blame` over all the files in the repository and show some nice 
 
 ```
 Authors:
-   Ricardo Pescuma Domenecci : 100.0% of the lines: 3342 lines (2088 code, 741 comment, 513 empty) in 26 commits from 2013-11 to 2015-04
+   Ricardo Pescuma Domenecci : 100.0% of the lines: 2938 lines (1758 code, 728 comment, 452 empty) in 29 commits from 2013-11 to 2015-04
 
 Months:
-   2013-11 : 2403 lines (1332 code, 736 comment, 335 empty) in 5 commits
-   2013-12 :  196 lines ( 158 code,   0 comment,  38 empty) in 3 commits
-   2014-03 :   18 lines (   9 code,   0 comment,   9 empty) in 4 commits
-   2015-03 :   38 lines (  32 code,   2 comment,   4 empty) in 6 commits
-   2015-04 :  687 lines ( 557 code,   3 comment, 127 empty) in 8 commits
+   2013-11 : 2106 lines (1100 code, 727 comment, 279 empty) in  5 commits
+   2013-12 :  184 lines ( 149 code,   0 comment,  35 empty) in  3 commits
+   2014-03 :   18 lines (   9 code,   0 comment,   9 empty) in  4 commits
+   2015-03 :   20 lines (  18 code,   0 comment,   2 empty) in  5 commits
+   2015-04 :  610 lines ( 482 code,   1 comment, 127 empty) in 12 commits
 
 Languages:
-   Java : 2756 lines (1614 code, 729 comment, 413 empty) in 18 commits from 2013-11 to 2015-04
-   XML  :  450 lines ( 366 code,  12 comment,  72 empty) in  6 commits from 2013-11 to 2015-04
-   Ant  :  105 lines (  86 code,   0 comment,  19 empty) in  3 commits from 2013-11 to 2015-03
-   Text :   31 lines (  22 code,   0 comment,   9 empty) in  5 commits from 2013-11 to 2015-03
+   Java : 2783 lines (1634 code, 728 comment, 421 empty) in 19 commits from 2013-11 to 2015-04
+   Ant  :   90 lines (  75 code,   0 comment,  15 empty) in  5 commits from 2013-11 to 2015-04
+   XML  :   34 lines (  27 code,   0 comment,   7 empty) in  8 commits from 2013-11 to 2015-04
+   Text :   31 lines (  22 code,   0 comment,   9 empty) in  5 commits from 2013-11 to 2015-04
 ```
 
 (of course it gets better when you have more people contributing to the repository)

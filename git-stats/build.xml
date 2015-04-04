@@ -3,12 +3,7 @@
 	<property name="project" value="git-stats" />
 	<property name="version" value="0.4" />
 
-	<import file="project.xml" />
-
-	<property name="build.dir" value="${basedir}/build" />
-	<property name="build.tmp.dir" value="${build.dir}/tmp" />
-
-	<taskdef resource="net/sf/antcontrib/antlib.xml" classpath="${basedir}/lib/build/ant-contrib-1.0b3.jar" />
+	<import file="build/build.xml" />
 
 	<target name="all"
 	        description="Compile, test, pack and report"
@@ -20,7 +15,7 @@
 		<mkdir dir="${build.tmp.dir}" />
 
 		<unzip dest="${build.tmp.dir}">
-			<fileset dir="build/dist">
+			<fileset dir="${dist.dir}">
 				<include name="**/*.jar" />
 				<exclude name="**/*-source.jar" />
 				<exclude name="**/*-sources.jar" />
@@ -30,10 +25,7 @@
 				<include name="**/*.jar" />
 				<exclude name="**/*-source.jar" />
 				<exclude name="**/*-sources.jar" />
-				<exclude name="**/ivy-*.jar" />
-				<exclude name="**/ant-*.jar" />
 				<exclude name="auto/compile/**/*" />
-				<exclude name="build/**/*" />
 			</fileset>
 		</unzip>
 
@@ -53,8 +45,6 @@
 	</target>
 
 	<target name="onejar.proguard">
-		<taskdef resource="proguard/ant/task.properties" classpath="${basedir}/lib/build/proguard-5.2.1.jar" />
-
 		<delete file="${build.dir}/git-stats-${version}.jar" quiet="true" />
 
 		<proguard>
@@ -79,10 +69,6 @@
 	</condition>
 
 	<target name="wrap" if="isWindows">
-		<taskdef name="launch4j"
-		         classname="net.sf.launch4j.ant.Launch4jTask"
-		         classpath="${basedir}/lib/build/launch4j-3.7/launch4j.jar:${basedir}/lib/build/launch4j-3.7/lib/xstream.jar" />
-
 		<launch4j>
 			<config headerType="console"
 			        jarPath="${build.dir}\git-stats-${version}.jar"
