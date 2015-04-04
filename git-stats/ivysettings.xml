@@ -2,7 +2,6 @@
 	<settings defaultResolver="default" />
 	<credentials host="api.bintray.com" realm="Bintray API Realm" username="pescuma" passwd="TODO" />
 	<resolvers>
-		<ibiblio name="bintray" root="http://dl.bintray.com/pescuma/git-stats" m2compatible="true" />
 		<ibiblio name="bintray-publish" root="https://api.bintray.com/maven/pescuma/git-stats/git-stats" m2compatible="true" />
 		<bintray name="public" />
 	</resolvers>

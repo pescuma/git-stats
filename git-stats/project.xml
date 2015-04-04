@@ -17,6 +17,7 @@
 	<property name="src.dir" location="${project.dir}/src" />
 	<property name="tests.dir" location="${project.dir}/tests" />
 	<property name="lib.dir" location="${project.dir}/lib" />
+	<property name="lib.auto.dir" value="${lib.dir}/auto" />
 	<property name="build.dir" location="${project.dir}/build" />
 	<property name="build.tmp.dir" location="${build.dir}/tmp" />
 	<property name="build.bin.dir" location="${build.tmp.dir}/bin" />
@@ -271,12 +272,11 @@
 	</target>
 
 	<target name="report" depends="init">
-		<taskdef resource="org/pescuma/buildhealth/ant/antlib.xml"
-		         classpath="${tools.lib.dir}/buildhealth-0.3.jar" />
+		<taskdef resource="org/pescuma/buildhealth/ant/antlib.xml" classpath="${tools.lib.dir}/buildhealth-0.3.jar" />
 
 		<buildhealth home="${reports.dir}/builhealth" report="true" notify="true">
 			<config key="coverage good" value="90" />
-			
+
 			<projects-from-eclipse dir="${basedir}" />
 			<compute-loc>
 				<fileset dir="${basedir}">
@@ -330,9 +330,19 @@
 		</buildhealth>
 	</target>
 
-	<!-- Ivy -->
+	<!-- ========================= IVY ========================= -->
 
-	<import file="ivy.xml" />
+	<target name="deps" depends="install-ivy" description="Download dependencies needed to build">
+		<property name="ivy.dep.file" value="${lib.dir}/ivy.xml" />
+		<ivy:settings file="${basedir}/ivysettings.xml" />
+		<ivy:retrieve sync="true" pattern="${lib.auto.dir}/[conf]/[artifact]-[revision]-[type].[ext]" />
+	</target>
+
+	<target name="check-deps" depends="install-ivy" description="Check new versions of the dependencies">
+		<property name="ivy.dep.file" value="${lib.dir}/ivy.xml" />
+		<ivy:settings file="${basedir}/ivysettings.xml" />
+		<ivy:checkdepsupdate />
+	</target>
 
 	<target name="mvn-generate-pom" depends="install-ivy">
 		<delete dir="${dist.dir}/maven" quiet="true" />
@@ -354,6 +364,37 @@
 		<ivy:publish resolver="bintray-publish" pubrevision="${version}" overwrite="true" publishivy="false">
 			<artifacts pattern="${dist.dir}/maven/[artifact](-[classifier]).[ext]" />
 		</ivy:publish>
+	</target>
+
+	<!-- Download -->
+
+	<property name="ivy.install.version" value="2.4.0" />
+	<property name="ivy.jar.dir" value="${lib.dir}/ivy" />
+	<property name="ivy.jar.file" value="${ivy.jar.dir}/ivy-${ivy.install.version}.jar" />
+
+	<target name="download-ivy">
+		<mkdir dir="${ivy.jar.dir}" />
+		<get src="http://repo1.maven.org/maven2/org/apache/ivy/ivy/${ivy.install.version}/ivy-${ivy.install.version}.jar" dest="${ivy.jar.file}" usetimestamp="true" />
+	</target>
+
+	<target name="install-ivy" depends="download-ivy">
+		<path id="ivy.lib.path">
+			<fileset dir="${ivy.jar.dir}" includes="*.jar" />
+		</path>
+		<taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path" />
+	</target>
+
+	<!-- Clean -->
+
+	<target name="clean-ivy">
+		<delete includeemptydirs="true" failonerror="false">
+			<fileset dir="${ivy.jar.dir}" />
+			<fileset dir="${lib.auto.dir}" />
+		</delete>
+	</target>
+
+	<target name="clean-ivy-cache" depends="install-ivy">
+		<ivy:cleancache />
 	</target>
 
 </project>

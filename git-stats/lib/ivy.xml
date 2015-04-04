@@ -2,15 +2,16 @@
 <ivy-module version="2.0" xmlns:e="http://ant.apache.org/ivy/extra">
 	<info organisation="org.pescuma" module="git-stats" />
 
-	<configurations defaultconfmapping="compile->default,sources;runtime->default">
-		<conf name="compile" />
-		<conf name="runtime" />
+	<configurations defaultconfmapping="compile->default,sources;default->default;sources->sources">
+		<conf name="compile" visibility="private" />
+		<conf name="default" />
+		<conf name="sources" />
 	</configurations>
 
 	<publications>
 		<artifact name="git-stats" type="jar" />
 		<artifact name="git-stats" type="pom" />
-		<artifact name="git-stats" type="jar" e:classifier="sources" />
+		<artifact name="git-stats" type="sources" ext="jar" e:classifier="sources" />
 	</publications>
 
 	<dependencies>
@@ -29,6 +30,5 @@
 
 		<dependency org="org.slf4j" name="slf4j-api" rev="1.7.12" />
 		<dependency org="org.slf4j" name="slf4j-jdk14" rev="1.7.12" />
-
 	</dependencies>
 </ivy-module>

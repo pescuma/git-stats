@@ -3,7 +3,6 @@
 	<property name="project" value="git-stats" />
 	<property name="version" value="0.4" />
 
-	<import file="ivy.xml" />
 	<import file="project.xml" />
 
 	<property name="build.dir" value="${basedir}/build" />
