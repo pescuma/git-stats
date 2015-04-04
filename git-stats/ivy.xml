@@ -8,7 +8,12 @@
 		<property name="ivy.dep.file" value="${lib.dir}/ivy.xml" />
 		<ivy:retrieve sync="true" pattern="${lib.auto.dir}/[conf]/[artifact]-[revision]-[type].[ext]" />
 	</target>
-		
+
+	<target name="check-deps" depends="install-ivy" description="Check new versions of the dependencies">
+		<property name="ivy.dep.file" value="${lib.dir}/ivy.xml" />
+		<ivy:checkdepsupdate />
+	</target>
+
 	<!-- ========================= IVY ========================= -->
 
 	<property name="ivy.install.version" value="2.4.0" />
