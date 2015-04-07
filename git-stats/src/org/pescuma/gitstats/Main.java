@@ -63,7 +63,7 @@ public class Main {
 		
 		for (File path : args.paths) {
 			if (path.isFile() && path.getName().endsWith(".csv"))
-				DataTableSerialization.loadFromCSV(data, path);
+				loadFromCSV(data, args, path);
 			else
 				RepositoryProcessor.process(data, args, path);
 		}
@@ -83,18 +83,15 @@ public class Main {
 		return 0;
 	}
 	
-	private static void outputStatsToCSV(DataTable data, String output) {
-		System.out.println("Writing output to " + output);
+	private static void loadFromCSV(DataTable data, final Args args, File file) {
+		System.out.println("Loading " + file.getAbsolutePath() + "...");
 		
-		DataTableSerialization.saveAsCSV(data, new File(output), false);
+		DataTable loaded = new MemoryDataTable();
+		DataTableSerialization.loadFromCSV(loaded, file);
 		
-		System.out.println();
-	}
-	
-	private static void outputStatsToConsole(DataTable data, final Args args) {
 		if (!args.excludedPaths.isEmpty()) {
 			final List<String> excludedPaths = preProcessExcludedPaths(args);
-			data = data.filter(Consts.COL_FILE, new Predicate<String>() {
+			loaded = loaded.filter(Consts.COL_FILE, new Predicate<String>() {
 				@Override
 				public boolean apply(String file) {
 					for (String excluded : excludedPaths) {
@@ -107,7 +104,7 @@ public class Main {
 		}
 		
 		if (!args.ignoredRevisions.isEmpty()) {
-			data = data.filter(Consts.COL_COMMIT, new Predicate<String>() {
+			loaded = loaded.filter(Consts.COL_COMMIT, new Predicate<String>() {
 				@Override
 				public boolean apply(String commit) {
 					for (String rev : args.ignoredRevisions) {
@@ -121,7 +118,7 @@ public class Main {
 		
 		if (!args.authors.isEmpty()) {
 			final Map<String, String> authorMappings = args.getAuthorMappings();
-			data = data.map(Consts.COL_AUTHOR, new Function<String, String>() {
+			loaded = loaded.map(Consts.COL_AUTHOR, new Function<String, String>() {
 				@Override
 				public String apply(String author) {
 					String alternateName = authorMappings.get(author);
@@ -132,6 +129,19 @@ public class Main {
 				}
 			});
 		}
+		
+		data.inc(loaded);
+	}
+	
+	private static void outputStatsToCSV(DataTable data, String output) {
+		System.out.println("Writing output to " + output);
+		
+		DataTableSerialization.saveAsCSV(data, new File(output), false);
+		
+		System.out.println();
+	}
+	
+	private static void outputStatsToConsole(DataTable data, final Args args) {
 		
 		double totalLines = data.sum();
 		

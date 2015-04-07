@@ -8,17 +8,16 @@ import java.util.Set;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.JGitInternalException;
+import org.eclipse.jgit.blame.BlameGenerator;
+import org.eclipse.jgit.blame.BlameResult;
 import org.eclipse.jgit.diff.RawText;
 import org.eclipse.jgit.diff.RawTextComparator;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevWalk;
 import org.pescuma.datatable.DataTable;
 import org.pescuma.datatable.MemoryDataTable;
-import org.pescuma.gitstats.blame.BlameGenerator;
-import org.pescuma.gitstats.blame.BlameResult;
 import org.pescuma.programminglanguagedetector.FilenameToLanguage;
 import org.pescuma.programminglanguagedetector.SimpleFileParser;
 import org.pescuma.programminglanguagedetector.SimpleFileParser.LineType;
@@ -38,11 +37,9 @@ public class AuthorsProcessor {
 	public DataTable computeAuthors(Iterable<String> files, Progress progress) throws GitAPIException {
 		DataTable data = new MemoryDataTable();
 		
-		RevWalk revWalk = new RevWalk(repository);
-		
 		for (String file : files) {
 			try {
-				computeAuthors(data, revWalk, file);
+				computeAuthors(data, file);
 			} finally {
 				progress.step();
 			}
@@ -51,13 +48,13 @@ public class AuthorsProcessor {
 		return data;
 	}
 	
-	private void computeAuthors(DataTable data, RevWalk revWalk, String file) throws GitAPIException {
+	private void computeAuthors(DataTable data, String file) throws GitAPIException {
 		
 		String language = FilenameToLanguage.detectLanguage(file);
 		
 		SimpleFileParser parser = new SimpleFileParser(language);
 		
-		BlameResult blame = blame(file, revWalk);
+		BlameResult blame = blame(file);
 		
 		RawText contents = blame.getResultContents();
 		for (int i = 0; i < contents.size(); i++) {
@@ -66,17 +63,15 @@ public class AuthorsProcessor {
 			
 			RevCommit commit = blame.getSourceCommit(i);
 			if (commit == null) {
-				data.inc(1, language, file, lineType);
+				data.inc(1, language, lineType, "", "", "", file);
 				continue;
 			}
+			
+			if (ignored.contains(commit.getId()))
+				continue;
 			
 			int time = commit.getCommitTime();
 			String month = new SimpleDateFormat("yyyy-MM").format(new Date(time * 1000L));
-			
-			if (ignored.contains(commit.getId())) {
-				data.inc(1, language, file, lineType, month, commit.getId().getName(), Consts.IGNORED);
-				continue;
-			}
 			
 			String authorName = blame.getSourceAuthor(i).getName();
 			if (authorName != null) {
@@ -85,7 +80,7 @@ public class AuthorsProcessor {
 					authorName = alternateName;
 			}
 			
-			data.inc(1, language, file, lineType, month, commit.getId().getName(), authorName);
+			data.inc(1, language, lineType, month, commit.getId().getName(), authorName, file);
 		}
 	}
 	
@@ -102,22 +97,19 @@ public class AuthorsProcessor {
 		}
 	}
 	
-	private BlameResult blame(String file, RevWalk revWalk) throws GitAPIException {
-		revWalk.reset();
-		
-		BlameGenerator gen = new BlameGenerator(repository, file, revWalk, null);
+	private BlameResult blame(String file) throws GitAPIException {
+		BlameGenerator blame = new BlameGenerator(repository, file);
 		try {
-			revWalk.markStart(revWalk.lookupCommit(repository.resolve(Constants.HEAD)));
 			
-			gen.setTextComparator(RawTextComparator.WS_IGNORE_ALL);
-			gen.setFollowFileRenames(true);
-			gen.push(null, repository.resolve(Constants.HEAD));
-			return gen.computeBlameResult();
+			blame.setTextComparator(RawTextComparator.WS_IGNORE_ALL);
+			blame.setFollowFileRenames(true);
+			blame.push(null, repository.resolve(Constants.HEAD));
+			return blame.computeBlameResult();
 			
 		} catch (IOException e) {
 			throw new JGitInternalException(e.getMessage(), e);
 		} finally {
-			gen.dispose();
+			blame.release();
 		}
 	}
 }
