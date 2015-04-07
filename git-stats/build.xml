@@ -1,6 +1,5 @@
 <project name="git-stats" default="all">
 
-	<property name="project" value="git-stats" />
 	<property name="version" value="0.4" />
 
 	<import file="build/build.xml" />

@@ -2,16 +2,16 @@
 <ivy-module version="2.0" xmlns:e="http://ant.apache.org/ivy/extra">
 	<info organisation="org.pescuma" module="git-stats" />
 
-	<configurations defaultconfmapping="compile->default,sources;runtime->default;sources->sources">
+	<configurations defaultconfmapping="compile->default,sources;default->default;sources->sources">
 		<conf name="compile" visibility="private" />
-		<conf name="runtime" />
+		<conf name="default" />
 		<conf name="sources" />
 	</configurations>
 
 	<publications>
 		<artifact name="git-stats" type="jar" />
 		<artifact name="git-stats" type="pom" />
-		<artifact name="git-stats" type="sources" ext="jar" e:classifier="sources" />
+		<artifact name="git-stats" type="source" ext="jar" e:classifier="source" />
 	</publications>
 
 	<dependencies>
