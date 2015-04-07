@@ -3,7 +3,9 @@ package org.pescuma.gitstats;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
@@ -29,7 +31,7 @@ public class Args {
 	public List<String> outputs = new ArrayList<String>();
 	
 	@Option(name = "--exclude-path", aliases = { "-ep" }, usage = "Exclude from process all files inside this path (can be used multiple times)")
-	public List<String> excludePaths = new ArrayList<String>();
+	public List<String> excludedPaths = new ArrayList<String>();
 	
 	void applyDefaults() {
 		if (paths.isEmpty())
@@ -47,13 +49,6 @@ public class Args {
 				outputs.set(i, getCanonical(outputs.get(i)));
 		}
 		
-		for (int i = 0; i < excludePaths.size(); i++) {
-			String canonical = getCanonical(excludePaths.get(i));
-			if (!canonical.endsWith(File.separator))
-				canonical += File.separator;
-			excludePaths.set(i, canonical);
-		}
-		
 		if (threads < 1) {
 			threads = Runtime.getRuntime().availableProcessors();
 			if (threads >= 4)
@@ -62,7 +57,18 @@ public class Args {
 		}
 	}
 	
-	private File getCanonical(File file) {
+	public Map<String, String> getAuthorMappings() {
+		Map<String, String> authorMappings = new HashMap<String, String>();
+		
+		for (String am : authors) {
+			int pos = am.indexOf('=');
+			authorMappings.put(am.substring(0, pos).trim(), am.substring(pos + 1).trim());
+		}
+		
+		return authorMappings;
+	}
+	
+	public static File getCanonical(File file) {
 		try {
 			return file.getCanonicalFile();
 		} catch (IOException e) {
@@ -70,7 +76,7 @@ public class Args {
 		}
 	}
 	
-	private String getCanonical(String file) {
+	public static String getCanonical(String file) {
 		try {
 			return new File(file).getCanonicalPath();
 		} catch (IOException e) {
@@ -81,4 +87,5 @@ public class Args {
 	public static boolean isConsole(String output) {
 		return output.equalsIgnoreCase("console");
 	}
+	
 }

@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.LogManager;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -20,10 +21,12 @@ import org.pescuma.datatable.DataTableSerialization;
 import org.pescuma.datatable.MemoryDataTable;
 import org.pescuma.gitstats.ColumnsOutput.Align;
 
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+
 public class Main {
 	
-	public static void main(String[] args) throws IOException, GitAPIException,
-			InterruptedException {
+	public static void main(String[] args) throws IOException, GitAPIException, InterruptedException {
 		disableLogger();
 		
 		Args parsedArgs = new Args();
@@ -59,8 +62,6 @@ public class Main {
 		DataTable data = new MemoryDataTable();
 		
 		for (File path : args.paths) {
-			System.out.println("Processing " + path.getAbsolutePath());
-			
 			if (path.isFile() && path.getName().endsWith(".csv"))
 				DataTableSerialization.loadFromCSV(data, path);
 			else
@@ -71,7 +72,7 @@ public class Main {
 		
 		for (String output : args.outputs) {
 			if (Args.isConsole(output))
-				outputStatsToConsole(data);
+				outputStatsToConsole(data, args);
 			
 			else if (output.endsWith(".csv"))
 				outputStatsToCSV(data, output);
@@ -90,7 +91,48 @@ public class Main {
 		System.out.println();
 	}
 	
-	private static void outputStatsToConsole(DataTable data) {
+	private static void outputStatsToConsole(DataTable data, final Args args) {
+		if (!args.excludedPaths.isEmpty()) {
+			final List<String> excludedPaths = preProcessExcludedPaths(args);
+			data = data.filter(Consts.COL_FILE, new Predicate<String>() {
+				@Override
+				public boolean apply(String file) {
+					for (String excluded : excludedPaths) {
+						if (normalizePath(file).startsWith(excluded))
+							return false;
+					}
+					return true;
+				}
+			});
+		}
+		
+		if (!args.ignoredRevisions.isEmpty()) {
+			data = data.filter(Consts.COL_COMMIT, new Predicate<String>() {
+				@Override
+				public boolean apply(String commit) {
+					for (String rev : args.ignoredRevisions) {
+						if (StringUtils.startsWithIgnoreCase(commit, rev))
+							return false;
+					}
+					return true;
+				}
+			});
+		}
+		
+		if (!args.authors.isEmpty()) {
+			final Map<String, String> authorMappings = args.getAuthorMappings();
+			data = data.map(Consts.COL_AUTHOR, new Function<String, String>() {
+				@Override
+				public String apply(String author) {
+					String alternateName = authorMappings.get(author);
+					if (alternateName != null)
+						return alternateName;
+					else
+						return author;
+				}
+			});
+		}
+		
 		double totalLines = data.sum();
 		
 		System.out.println("Authors:");
@@ -160,8 +202,7 @@ public class Main {
 			
 			out.appendColumn("   ").appendColumn(language).appendColumn(" : ");
 			appendLines(out, languageData);
-			out.appendColumn(" in ")
-					.appendColumn(languageData.getDistinct(Consts.COL_COMMIT).size())
+			out.appendColumn(" in ").appendColumn(languageData.getDistinct(Consts.COL_COMMIT).size())
 					.appendColumn(" commits from ").appendColumn(months[0]).appendColumn(" to ")
 					.appendColumn(months[1]);
 			
@@ -180,12 +221,9 @@ public class Main {
 	
 	private static void appendLines(ColumnsOutput out, DataTable data, double total) {
 		out.appendColumn((int) total).appendColumn(" lines (")
-				.appendColumn((int) data.filter(Consts.COL_LINE_TYPE, Consts.CODE).sum())
-				.appendColumn(" code, ")
-				.appendColumn((int) data.filter(Consts.COL_LINE_TYPE, Consts.COMMENT).sum())
-				.appendColumn(" comment, ")
-				.appendColumn((int) data.filter(Consts.COL_LINE_TYPE, Consts.EMPTY).sum())
-				.appendColumn(" empty)");
+				.appendColumn((int) data.filter(Consts.COL_LINE_TYPE, Consts.CODE).sum()).appendColumn(" code, ")
+				.appendColumn((int) data.filter(Consts.COL_LINE_TYPE, Consts.COMMENT).sum()).appendColumn(" comment, ")
+				.appendColumn((int) data.filter(Consts.COL_LINE_TYPE, Consts.EMPTY).sum()).appendColumn(" empty)");
 	}
 	
 	private static double percent(double count, double total) {
@@ -213,4 +251,26 @@ public class Main {
 		});
 		return sorted;
 	}
+	
+	private static List<String> preProcessExcludedPaths(Args args) {
+		List<String> result = new ArrayList<String>();
+		
+		for (String path : args.excludedPaths)
+			result.add(normalizePath(path));
+		
+		return result;
+	}
+	
+	private static String normalizePath(String path) {
+		String result = path.replace('\\', '/');
+		
+		if (result.startsWith("/"))
+			result = result.substring(1);
+		
+		if (!result.endsWith("/"))
+			result += "/";
+		
+		return result;
+	}
+	
 }

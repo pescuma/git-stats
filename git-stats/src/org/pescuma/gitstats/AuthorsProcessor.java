@@ -29,15 +29,13 @@ public class AuthorsProcessor {
 	private final Set<ObjectId> ignored;
 	private final Map<String, String> authorMappings;
 	
-	public AuthorsProcessor(Repository repository, Set<ObjectId> ignored,
-			Map<String, String> authorMappings) {
+	public AuthorsProcessor(Repository repository, Set<ObjectId> ignored, Map<String, String> authorMappings) {
 		this.repository = repository;
 		this.authorMappings = authorMappings;
 		this.ignored = ignored;
 	}
 	
-	public DataTable computeAuthors(Iterable<String> files, Progress progress)
-			throws GitAPIException {
+	public DataTable computeAuthors(Iterable<String> files, Progress progress) throws GitAPIException {
 		DataTable data = new MemoryDataTable();
 		
 		RevWalk revWalk = new RevWalk(repository);
@@ -53,8 +51,7 @@ public class AuthorsProcessor {
 		return data;
 	}
 	
-	private void computeAuthors(DataTable data, RevWalk revWalk, String file)
-			throws GitAPIException {
+	private void computeAuthors(DataTable data, RevWalk revWalk, String file) throws GitAPIException {
 		
 		String language = FilenameToLanguage.detectLanguage(file);
 		
@@ -69,7 +66,7 @@ public class AuthorsProcessor {
 			
 			RevCommit commit = blame.getSourceCommit(i);
 			if (commit == null) {
-				data.inc(1, language, lineType);
+				data.inc(1, language, file, lineType);
 				continue;
 			}
 			
@@ -77,7 +74,7 @@ public class AuthorsProcessor {
 			String month = new SimpleDateFormat("yyyy-MM").format(new Date(time * 1000L));
 			
 			if (ignored.contains(commit.getId())) {
-				data.inc(1, language, lineType, month, commit.getId().getName(), Consts.IGNORED);
+				data.inc(1, language, file, lineType, month, commit.getId().getName(), Consts.IGNORED);
 				continue;
 			}
 			
@@ -88,7 +85,7 @@ public class AuthorsProcessor {
 					authorName = alternateName;
 			}
 			
-			data.inc(1, language, lineType, month, commit.getId().getName(), authorName);
+			data.inc(1, language, file, lineType, month, commit.getId().getName(), authorName);
 		}
 	}
 	
