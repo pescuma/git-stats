@@ -16,7 +16,6 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.pescuma.datatable.DataTable;
-import org.pescuma.datatable.DataTable.Value;
 import org.pescuma.datatable.DataTableSerialization;
 import org.pescuma.datatable.MemoryDataTable;
 import org.pescuma.gitstats.ColumnsOutput.Align;
@@ -104,7 +103,7 @@ public class Main {
 				@Override
 				public boolean apply(String file) {
 					for (String excluded : excludedPaths) {
-						if (normalizePath(file).startsWith(excluded))
+						if (file.startsWith(excluded))
 							return false;
 					}
 					return true;
@@ -259,13 +258,13 @@ public class Main {
 	}
 	
 	private static List<String> sortedByLines(DataTable data, int col) {
-		final Map<String, Value> authorAndLines = data.sumDistinct(col);
+		final DataTable authorAndLines = data.groupBy(col);
 		
-		List<String> sorted = new ArrayList<String>(authorAndLines.keySet());
+		List<String> sorted = new ArrayList<String>(authorAndLines.getColumn(0));
 		Collections.sort(sorted, new Comparator<String>() {
 			@Override
 			public int compare(String o1, String o2) {
-				return (int) (authorAndLines.get(o2).value - authorAndLines.get(o1).value);
+				return (int) (authorAndLines.get(o2) - authorAndLines.get(o1));
 			}
 		});
 		return sorted;
