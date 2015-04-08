@@ -62,13 +62,22 @@ public class Main {
 		DataTable data = new MemoryDataTable();
 		
 		for (File path : args.paths) {
-			if (path.isFile() && path.getName().endsWith(".csv"))
+			if (!path.exists())
+				System.err.println("File/folder not found: " + path);
+			
+			else if (path.isFile() && path.getName().endsWith(".csv"))
 				loadFromCSV(data, args, path);
+			
 			else
 				RepositoryProcessor.process(data, args, path);
 		}
 		
 		System.out.println();
+		
+		if (data.isEmpty()) {
+			System.out.println("No data available");
+			return -1;
+		}
 		
 		for (String output : args.outputs) {
 			if (Args.isConsole(output))
