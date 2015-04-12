@@ -217,9 +217,7 @@ public class Main {
 			out.appendColumn("   ").appendColumn(author).appendColumn(" : ")
 					.appendColumn(Align.Right, "%.1f%%", percent(authorLines, totalLines))
 					.appendColumn(" of the lines: ");
-			
 			appendLines(out, authorData, authorLines);
-			
 			appendCommits(out, authorData);
 			
 			out.newLine();
@@ -240,23 +238,28 @@ public class Main {
 		out.print(System.out);
 		System.out.println();
 		
-		System.out.println("Months:");
+		System.out.print("Months: ");
 		out = new ColumnsOutput();
+		List<Double> perMonthLines = new ArrayList<Double>();
 		for (String month : data.getDistinct(Consts.COL_MONTH)) {
-			if (month.isEmpty())
+			if (month.isEmpty()) {
+				perMonthLines.add(0d);
 				continue;
+			}
 			
 			DataTable monthData = data.filter(Consts.COL_MONTH, month);
+			double monthLines = monthData.sum();
+			
+			perMonthLines.add(monthLines);
 			
 			out.appendColumn("   ").appendColumn(month).appendColumn(" : ");
-			
-			appendLines(out, monthData);
-			
+			appendLines(out, monthData, monthLines);
 			out.appendColumn(" in ").appendColumn(monthData.getDistinct(Consts.COL_COMMIT).size())
 					.appendColumn(" commits");
 			
 			out.newLine();
 		}
+		System.out.println(Sparkline.getSparkline(perMonthLines));
 		out.print(System.out);
 		System.out.println();
 		
