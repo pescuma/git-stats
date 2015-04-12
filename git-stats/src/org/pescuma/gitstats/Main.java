@@ -4,24 +4,31 @@ import static java.lang.Math.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.Charset;
+import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.LogManager;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.pescuma.datatable.DataTable;
+import org.pescuma.datatable.DataTable.Line;
 import org.pescuma.datatable.DataTableSerialization;
 import org.pescuma.datatable.MemoryDataTable;
 import org.pescuma.gitstats.ColumnsOutput.Align;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.io.Files;
 
 public class Main {
 	
@@ -84,6 +91,10 @@ public class Main {
 			
 			else if (output.endsWith(".csv"))
 				outputStatsToCSV(data, output);
+			
+			else if (output.endsWith(".htm") || output.endsWith(".html"))
+				outputStatsToHTML(data, output);
+			
 			else
 				System.out.println("Unknown output format: " + output);
 		}
@@ -126,7 +137,7 @@ public class Main {
 		
 		if (!args.authors.isEmpty()) {
 			final Map<String, String> authorMappings = args.getAuthorMappings();
-			loaded = loaded.map(Consts.COL_AUTHOR, new Function<String, String>() {
+			loaded = loaded.mapColumn(Consts.COL_AUTHOR, new Function<String, String>() {
 				@Override
 				public String apply(String author) {
 					String alternateName = authorMappings.get(author);
@@ -142,11 +153,41 @@ public class Main {
 	}
 	
 	private static void outputStatsToCSV(DataTable data, String output) {
-		System.out.println("Writing output to " + output);
+		System.out.println("Writing CSV output to " + output);
 		
 		DataTableSerialization.saveAsCSV(data, new File(output), false);
 		
 		System.out.println();
+	}
+	
+	private static void outputStatsToHTML(DataTable data, String output) throws IOException {
+		System.out.println("Writing HTML output to " + output);
+		
+		StringBuilder lines = new StringBuilder();
+		for (Line line : data.getLines()) {
+			lines.append("        data.add(").append(line.getValue());
+			for (String col : line.getColumns())
+				lines.append(", '").append(col.replace("'", "\\'")).append("'");
+			lines.append(");\n");
+		}
+		
+		String html = readIndexHtml();
+		html = html.replace("$$$date$$$", DateFormat.getDateTimeInstance().format(new Date()));
+		html = html.replace("$$$version$$$", "0.1");
+		html = html.replace("$$$data$$$", lines.toString());
+		
+		Files.write(html, new File(output), Charset.forName("UTF-8"));
+		
+		System.out.println();
+	}
+	
+	private static String readIndexHtml() throws IOException {
+		InputStream in = Main.class.getResourceAsStream("/org/pescuma/gitstats/export/index.html");
+		try {
+			return IOUtils.toString(in, "UTF-8");
+		} finally {
+			in.close();
+		}
 	}
 	
 	private static void outputStatsToConsole(DataTable data, final Args args) {
@@ -251,6 +292,8 @@ public class Main {
 	private static String[] getMonthRange(DataTable authorData) {
 		List<String> result = new ArrayList<String>(authorData.getDistinct(Consts.COL_MONTH));
 		result.remove("");
+		Collections.sort(result);
+		
 		if (result.size() < 1)
 			return new String[] { "unknown", "unknown" };
 		else
