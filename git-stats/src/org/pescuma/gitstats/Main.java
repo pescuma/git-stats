@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -207,7 +208,7 @@ public class Main {
 		
 		System.out.println("Authors:");
 		out = new ColumnsOutput();
-		for (String author : sortedByLines(data, Consts.COL_AUTHOR)) {
+		for (String author : sortByLines(data, Consts.COL_AUTHOR)) {
 			if (author.isEmpty())
 				continue;
 			
@@ -241,7 +242,7 @@ public class Main {
 		System.out.print("Months: ");
 		out = new ColumnsOutput();
 		List<Double> perMonthLines = new ArrayList<Double>();
-		for (String month : data.getDistinct(Consts.COL_MONTH)) {
+		for (String month : sortByText(data.getDistinct(Consts.COL_MONTH))) {
 			if (month.isEmpty()) {
 				perMonthLines.add(0d);
 				continue;
@@ -265,7 +266,7 @@ public class Main {
 		
 		System.out.println("Languages:");
 		out = new ColumnsOutput();
-		for (String language : sortedByLines(data, Consts.COL_LANGUAGE)) {
+		for (String language : sortByLines(data, Consts.COL_LANGUAGE)) {
 			DataTable languageData = data.filter(Consts.COL_LANGUAGE, language);
 			
 			out.appendColumn("   ").appendColumn(language).appendColumn(" : ");
@@ -318,7 +319,13 @@ public class Main {
 			return new String[] { result.get(0), result.get(result.size() - 1) };
 	}
 	
-	private static List<String> sortedByLines(DataTable data, int col) {
+	private static List<String> sortByText(Collection<String> data) {
+		List<String> result = new ArrayList<String>(data);
+		Collections.sort(result);
+		return result;
+	}
+	
+	private static List<String> sortByLines(DataTable data, int col) {
 		final DataTable authorAndLines = data.groupBy(col);
 		
 		List<String> sorted = new ArrayList<String>(authorAndLines.getColumn(0));
