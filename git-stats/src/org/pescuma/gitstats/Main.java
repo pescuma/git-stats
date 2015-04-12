@@ -194,14 +194,24 @@ public class Main {
 		
 		double totalLines = data.sum();
 		
-		System.out.println("Authors:");
+		System.out.println("Total:");
 		ColumnsOutput out = new ColumnsOutput();
+		{
+			out.appendColumn("   ");
+			appendLines(out, data);
+			appendCommits(out, data);
+			appendUnblamable(out, data);
+		}
+		out.print(System.out);
+		System.out.println();
+		
+		System.out.println("Authors:");
+		out = new ColumnsOutput();
 		for (String author : sortedByLines(data, Consts.COL_AUTHOR)) {
 			if (author.isEmpty())
 				continue;
 			
 			DataTable authorData = data.filter(Consts.COL_AUTHOR, author);
-			String[] months = getMonthRange(authorData);
 			double authorLines = authorData.sum();
 			
 			out.appendColumn("   ").appendColumn(author).appendColumn(" : ")
@@ -210,9 +220,7 @@ public class Main {
 			
 			appendLines(out, authorData, authorLines);
 			
-			out.appendColumn(" in ").appendColumn(authorData.getDistinct(Consts.COL_COMMIT).size())
-					.appendColumn(" commits from ").appendColumn(months[0]).appendColumn(" to ")
-					.appendColumn(months[1]);
+			appendCommits(out, authorData);
 			
 			out.newLine();
 		}
@@ -256,17 +264,11 @@ public class Main {
 		out = new ColumnsOutput();
 		for (String language : sortedByLines(data, Consts.COL_LANGUAGE)) {
 			DataTable languageData = data.filter(Consts.COL_LANGUAGE, language);
-			String[] months = getMonthRange(languageData);
-			long unblamable = round(languageData.filter(Consts.COL_AUTHOR, "").sum());
 			
 			out.appendColumn("   ").appendColumn(language).appendColumn(" : ");
 			appendLines(out, languageData);
-			out.appendColumn(" in ").appendColumn(languageData.getDistinct(Consts.COL_COMMIT).size())
-					.appendColumn(" commits from ").appendColumn(months[0]).appendColumn(" to ")
-					.appendColumn(months[1]);
-			
-			if (unblamable > 0)
-				out.appendColumn(" (").appendColumn((int) unblamable).appendColumn(" umblamable)");
+			appendCommits(out, languageData);
+			appendUnblamable(out, languageData);
 			
 			out.newLine();
 		}
@@ -283,6 +285,19 @@ public class Main {
 				.appendColumn((int) data.filter(Consts.COL_LINE_TYPE, Consts.CODE).sum()).appendColumn(" code, ")
 				.appendColumn((int) data.filter(Consts.COL_LINE_TYPE, Consts.COMMENT).sum()).appendColumn(" comment, ")
 				.appendColumn((int) data.filter(Consts.COL_LINE_TYPE, Consts.EMPTY).sum()).appendColumn(" empty)");
+	}
+	
+	private static void appendCommits(ColumnsOutput out, DataTable data) {
+		String[] months = getMonthRange(data);
+		
+		out.appendColumn(" in ").appendColumn(data.getDistinct(Consts.COL_COMMIT).size())
+				.appendColumn(" commits from ").appendColumn(months[0]).appendColumn(" to ").appendColumn(months[1]);
+	}
+	
+	private static void appendUnblamable(ColumnsOutput out, DataTable data) {
+		long unblamable = round(data.filter(Consts.COL_AUTHOR, "").sum());
+		if (unblamable > 0)
+			out.appendColumn(" (").appendColumn((int) unblamable).appendColumn(" umblamable)");
 	}
 	
 	private static double percent(double count, double total) {
