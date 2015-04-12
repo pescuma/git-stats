@@ -200,7 +200,10 @@ public class Main {
 		{
 			out.appendColumn("   ");
 			appendLines(out, data);
+			appendFiles(out, data);
+			appendLanguages(out, data);
 			appendCommits(out, data);
+			appendMonths(out, data);
 			appendUnblamable(out, data);
 		}
 		out.print(System.out);
@@ -219,7 +222,10 @@ public class Main {
 					.appendColumn(Align.Right, "%.1f%%", percent(authorLines, totalLines))
 					.appendColumn(" of the lines: ");
 			appendLines(out, authorData, authorLines);
+			appendFiles(out, authorData);
+			appendLanguages(out, authorData);
 			appendCommits(out, authorData);
+			appendMonths(out, authorData);
 			
 			out.newLine();
 		}
@@ -232,6 +238,8 @@ public class Main {
 						.appendColumn(" of the lines: ");
 				
 				appendLines(out, unblamableData, unblamableLines);
+				appendFiles(out, unblamableData);
+				appendLanguages(out, unblamableData);
 				
 				out.newLine();
 			}
@@ -255,8 +263,9 @@ public class Main {
 			
 			out.appendColumn("   ").appendColumn(month).appendColumn(" : ");
 			appendLines(out, monthData, monthLines);
-			out.appendColumn(" in ").appendColumn(monthData.getDistinct(Consts.COL_COMMIT).size())
-					.appendColumn(" commits");
+			appendFiles(out, monthData);
+			appendLanguages(out, monthData);
+			appendCommits(out, monthData);
 			
 			out.newLine();
 		}
@@ -271,13 +280,23 @@ public class Main {
 			
 			out.appendColumn("   ").appendColumn(language).appendColumn(" : ");
 			appendLines(out, languageData);
+			appendFiles(out, languageData);
 			appendCommits(out, languageData);
+			appendMonths(out, languageData);
 			appendUnblamable(out, languageData);
 			
 			out.newLine();
 		}
 		out.print(System.out);
 		System.out.println();
+	}
+	
+	private static void appendLanguages(ColumnsOutput out, DataTable data) {
+		out.appendColumn(" in ").appendColumn(data.getDistinct(Consts.COL_LANGUAGE).size()).appendColumn(" languages");
+	}
+	
+	private static void appendFiles(ColumnsOutput out, DataTable data) {
+		out.appendColumn(" in ").appendColumn(data.getDistinct(Consts.COL_FILE).size()).appendColumn(" files");
 	}
 	
 	private static void appendLines(ColumnsOutput out, DataTable data) {
@@ -292,10 +311,13 @@ public class Main {
 	}
 	
 	private static void appendCommits(ColumnsOutput out, DataTable data) {
+		out.appendColumn(" in ").appendColumn(data.getDistinct(Consts.COL_COMMIT).size()).appendColumn(" commits");
+	}
+	
+	private static void appendMonths(ColumnsOutput out, DataTable data) {
 		String[] months = getMonthRange(data);
 		
-		out.appendColumn(" in ").appendColumn(data.getDistinct(Consts.COL_COMMIT).size())
-				.appendColumn(" commits from ").appendColumn(months[0]).appendColumn(" to ").appendColumn(months[1]);
+		out.appendColumn(" from ").appendColumn(months[0]).appendColumn(" to ").appendColumn(months[1]);
 	}
 	
 	private static void appendUnblamable(ColumnsOutput out, DataTable data) {
