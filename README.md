@@ -29,3 +29,27 @@ Languages:
 ```
 
 (of course it gets better when you have more people contributing to the repository)
+
+
+### Multiple repositories
+
+You can use:
+```
+git stats <path to repo 1> <path to repo 2>
+```
+
+If it takes too long you can process it one at a time:
+```
+git stats <path to repo 1> -o 1.csv
+git stats <path to repo 2> -o 2.csv
+git stats 1.csv 2.csv
+```
+
+### Options
+
+Also, you can fix some common problems:
+   - Ignore some revisions: `git stats 1.csv 2.csv -i 98ad99e -i 123456`
+   - Rename/group authors: `git stats 1.csv 2.csv -a "jh=John" -a "abc=My Pretty Name"`
+   - Exclude path: `git stats 1.csv 2.csv -ep a/b`
+
+You can also export to CSV and HTML: `git stats -o a.csv -o a.html -o -`
