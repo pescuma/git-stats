@@ -6,6 +6,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.io.FilenameUtils;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.JGitInternalException;
 import org.eclipse.jgit.blame.BlameGenerator;
@@ -27,11 +28,14 @@ public class AuthorsProcessor {
 	private final Repository repository;
 	private final Set<ObjectId> ignored;
 	private final Map<String, String> authorMappings;
+	private final Map<String, String> languageMappings;
 	
-	public AuthorsProcessor(Repository repository, Set<ObjectId> ignored, Map<String, String> authorMappings) {
+	public AuthorsProcessor(Repository repository, Set<ObjectId> ignored, Map<String, String> authorMappings,
+			Map<String, String> languageMappings) {
 		this.repository = repository;
 		this.authorMappings = authorMappings;
 		this.ignored = ignored;
+		this.languageMappings = languageMappings;
 	}
 	
 	public DataTable computeAuthors(Iterable<String> files, Progress progress) throws GitAPIException {
@@ -49,8 +53,7 @@ public class AuthorsProcessor {
 	}
 	
 	private void computeAuthors(DataTable data, String file) throws GitAPIException {
-		
-		String language = FilenameToLanguage.detectLanguage(file);
+		String language = detectLanguage(file);
 		
 		SimpleFileParser parser = new SimpleFileParser(language);
 		
@@ -82,6 +85,14 @@ public class AuthorsProcessor {
 			
 			data.inc(1, language, lineType, month, commit.getId().getName(), authorName, file);
 		}
+	}
+	
+	private String detectLanguage(String file) {
+		String language = languageMappings.get(FilenameUtils.getExtension(file));
+		if (language != null)
+			return language;
+		
+		return FilenameToLanguage.detectLanguage(file);
 	}
 	
 	private static String toLineTypeName(LineType lineType) {

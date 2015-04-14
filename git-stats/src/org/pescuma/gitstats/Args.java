@@ -33,6 +33,9 @@ public class Args {
 	@Option(name = "--exclude-path", aliases = { "-ep" }, usage = "Exclude from process all files inside this path (can be used multiple times)")
 	public List<String> excludedPaths = new ArrayList<String>();
 	
+	@Option(name = "--add-language", usage = "Add a language, based on a file extension, in the format ext=Language (can be used multiple times)")
+	public List<String> languages = new ArrayList<String>();
+	
 	void applyDefaults() {
 		if (paths.isEmpty())
 			paths.add(new File("."));
@@ -58,14 +61,22 @@ public class Args {
 	}
 	
 	public Map<String, String> getAuthorMappings() {
-		Map<String, String> authorMappings = new HashMap<String, String>();
+		return split(authors);
+	}
+	
+	public Map<String, String> getLanguageMappings() {
+		return split(languages);
+	}
+	
+	private Map<String, String> split(List<String> lines) {
+		Map<String, String> result = new HashMap<String, String>();
 		
-		for (String am : authors) {
+		for (String am : lines) {
 			int pos = am.indexOf('=');
-			authorMappings.put(am.substring(0, pos).trim(), am.substring(pos + 1).trim());
+			result.put(am.substring(0, pos).trim(), am.substring(pos + 1).trim());
 		}
 		
-		return authorMappings;
+		return result;
 	}
 	
 	public static File getCanonical(File file) {

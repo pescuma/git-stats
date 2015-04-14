@@ -47,6 +47,7 @@ public class RepositoryProcessor {
 		
 		final Set<ObjectId> ignored = preProcessIgnored(args, repository);
 		final Map<String, String> authorMappings = args.getAuthorMappings();
+		final Map<String, String> languageMappings = args.getLanguageMappings();
 		List<String> excludedPaths = preProcessExcludedPaths(args);
 		
 		TreeWalk tree = new TreeWalk(repository);
@@ -72,7 +73,8 @@ public class RepositoryProcessor {
 		new ParallelLists(args.threads).splitInThreads(files, new ParallelLists.Callback<String>() {
 			@Override
 			public void run(Iterable<String> files) throws Exception {
-				tables.add(new AuthorsProcessor(repository, ignored, authorMappings).computeAuthors(files, progress));
+				tables.add(new AuthorsProcessor(repository, ignored, authorMappings, languageMappings).computeAuthors(
+						files, progress));
 			}
 		});
 		
