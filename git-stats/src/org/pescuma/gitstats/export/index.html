@@ -367,9 +367,7 @@
         function filterAndShowData() {
             data = fullData;
 
-            months = fullData.getDistinct(COL_MONTH)
-                    .exclude("")
-                    .sort();
+            months = getMonthRange(fullData);
 
             var authors = $('#authors-select').val();
             if (authors)
@@ -490,7 +488,7 @@
 
             var itemData = data.filter(col, item);
 
-            var mr = getMonthRange(itemData);
+            var mr = getFirstAndLastMonths(itemData);
 
             var itemLines = itemData.sum();
 
@@ -529,7 +527,7 @@
         return result;
     }
 
-    function getMonthRange(data) {
+    function getFirstAndLastMonths(data) {
         var result = data.getDistinct(COL_MONTH)
                 .exclude("");
         result.sort();
@@ -538,6 +536,16 @@
             return ["unknown", "unknown"];
         else
             return [result[0], result[result.length - 1]];
+    }
+
+    function getMonthRange(data) {
+        var fl = getFirstAndLastMonths(data);
+        if (fl[0] === "unknown")
+            return [];
+
+        return Date.range(fl[0], fl[1])
+                .every('month')
+                .map(function (m) { return m.format('{yyyy}-{MM}'); });
     }
 
     function percent(count, total) {
