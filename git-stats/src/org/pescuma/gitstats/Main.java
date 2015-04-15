@@ -222,6 +222,7 @@ public class Main {
 			appendFiles(out, data);
 			appendLanguages(out, data);
 			appendCommits(out, data);
+			appendAuthors(out, data);
 			appendMonths(out, data);
 			appendUnblamable(out, data);
 		}
