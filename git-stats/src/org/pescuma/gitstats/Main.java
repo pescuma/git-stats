@@ -266,6 +266,7 @@ public class Main {
 			appendFiles(out, monthData);
 			appendLanguages(out, monthData);
 			appendCommits(out, monthData);
+			appendAuthors(out, monthData);
 			
 			out.newLine();
 		}
@@ -282,6 +283,7 @@ public class Main {
 			appendLines(out, languageData);
 			appendFiles(out, languageData);
 			appendCommits(out, languageData);
+			appendAuthors(out, languageData);
 			appendMonths(out, languageData);
 			appendUnblamable(out, languageData);
 			
@@ -312,6 +314,10 @@ public class Main {
 	
 	private static void appendCommits(ColumnsOutput out, DataTable data) {
 		out.appendColumn(" in ").appendColumn(data.getDistinct(Consts.COL_COMMIT).size()).appendColumn(" commits");
+	}
+	
+	private static void appendAuthors(ColumnsOutput out, DataTable data) {
+		out.appendColumn(" by ").appendColumn(data.getDistinct(Consts.COL_AUTHOR).size()).appendColumn(" authors");
 	}
 	
 	private static void appendMonths(ColumnsOutput out, DataTable data) {
