@@ -12,7 +12,7 @@ It will run `git blame` over all the files in the repository and show some nice 
 
 ```
 Total:
-   1995 lines (1611 code, 9 comment, 375 empty) in 13 files in 5 languages in 43 commits from 2013-11 to 2015-04
+   1995 lines (1611 code, 9 comment, 375 empty) in 13 files in 5 languages in 43 commits by 1 authors from 2013-11 to 2015-04
 
 Authors:
    Ricardo Pescuma Domenecci : 100.0% of the lines: 1995 lines (1611 code, 9 comment, 375 empty) in 13 files in 5 languages in 43 commits from 2013-11 to 2015-04
@@ -29,7 +29,8 @@ Languages:
    HTML :  723 lines (613 code, 5 comment, 105 empty) in 1 files in  2 commits by 1 authors from 2015-04 to 2015-04
    Ant  :   89 lines ( 74 code, 0 comment,  15 empty) in 1 files in  5 commits by 1 authors from 2013-11 to 2015-04
    Text :   55 lines ( 39 code, 0 comment,  16 empty) in 1 files in  7 commits by 1 authors from 2013-11 to 2015-04
-   XML  :   34 lines ( 27 code, 0 comment,   7 empty) in 1 files in  9 commits by 1 authors from 2013-11 to 2015-04```
+   XML  :   34 lines ( 27 code, 0 comment,   7 empty) in 1 files in  9 commits by 1 authors from 2013-11 to 2015-04
+```
 
 (of course it gets better when you have more people contributing to the repository)
 
