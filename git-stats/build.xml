@@ -38,6 +38,8 @@
 			<manifest>
 				<attribute name="Main-Class" value="org.pescuma.gitstats.Main" />
 				<attribute name="Class-Path" value="." />
+				<attribute name="Specification-Version" value="${version}" />
+				<attribute name="Implementation-Version" value="${version}" />
 			</manifest>
 			<fileset dir="${build.tmp.dir}" />
 		</jar>

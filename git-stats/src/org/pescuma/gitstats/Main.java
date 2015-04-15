@@ -193,12 +193,19 @@ public class Main {
 		
 		String html = readIndexHtml();
 		html = html.replace("$$$date$$$", DateFormat.getDateTimeInstance().format(new Date()));
-		html = html.replace("$$$version$$$", "0.1");
+		html = html.replace("$$$version$$$", getVersion());
 		html = html.replace("$$$data$$$", lines.toString());
 		
 		Files.write(html, new File(output), Charset.forName("UTF-8"));
 		
 		System.out.println();
+	}
+	
+	private static String getVersion() {
+		String version = Main.class.getPackage().getImplementationVersion();
+		if (version == null)
+			version = "devel";
+		return version;
 	}
 	
 	private static String readIndexHtml() throws IOException {
