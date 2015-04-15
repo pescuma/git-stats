@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.LogManager;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -25,6 +26,7 @@ import org.pescuma.datatable.DataTable;
 import org.pescuma.datatable.DataTable.Line;
 import org.pescuma.datatable.DataTableSerialization;
 import org.pescuma.datatable.MemoryDataTable;
+import org.pescuma.datatable.func.Function2;
 import org.pescuma.gitstats.ColumnsOutput.Align;
 
 import com.google.common.base.Function;
@@ -141,11 +143,28 @@ public class Main {
 			loaded = loaded.mapColumn(Consts.COL_AUTHOR, new Function<String, String>() {
 				@Override
 				public String apply(String author) {
-					String alternateName = authorMappings.get(author);
-					if (alternateName != null)
-						return alternateName;
+					String newAuthor = authorMappings.get(author);
+					
+					if (newAuthor != null)
+						return newAuthor;
 					else
 						return author;
+				}
+			});
+		}
+		
+		if (!args.languages.isEmpty()) {
+			final Map<String, String> languageMappings = args.getLanguageMappings();
+			loaded = loaded.mapColumn(Consts.COL_LANGUAGE, new Function2<String, String, Line>() {
+				@Override
+				public String apply(String language, Line line) {
+					String extension = FilenameUtils.getExtension(line.getColumn(Consts.COL_FILE));
+					String newLanguage = languageMappings.get(extension);
+					
+					if (newLanguage != null)
+						return newLanguage;
+					else
+						return language;
 				}
 			});
 		}
