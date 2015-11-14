@@ -18,61 +18,61 @@
 
 	<b-tabs>
 		<b-tab title="Authors">
-			<b-datatable colspan="12" :data="tableAuthors">
+			<b-datatable colspan="12" :model="tableAuthors">
 				<b-column header="Author" width="20%" :render="renderName"></b-column>
-				<b-column :header="['Lines', 'Total']" data="lines.total" class="text-right"></b-column>
-				<b-column :header="['Lines', '%']" data="lines.percent" class="text-right"></b-column>
-				<b-column :header="['Lines', 'Code']" data="lines.code" class="text-right"></b-column>
-				<b-column :header="['Lines', 'Comment']" data="lines.comment" class="text-right"></b-column>
-				<b-column :header="['Lines', 'Empty']" data="lines.empty" class="text-right"></b-column>
-				<b-column header="Files" data="files" class="text-right"></b-column>
-				<b-column header="Languages" data="languages" class="text-right"></b-column>
-				<b-column :header="['Commits', 'Total']" data="commits.total" class="text-right"></b-column>
-				<b-column :header="['Commits', 'First']" data="commits.start" class="text-right"></b-column>
-				<b-column :header="['Commits', 'Last']" data="commits.end" class="text-right"></b-column>
+				<b-column :header="['Lines', 'Total']" value="lines.total" class="text-right"></b-column>
+				<b-column :header="['Lines', '%']" value="lines.percent" class="text-right"></b-column>
+				<b-column :header="['Lines', 'Code']" value="lines.code" class="text-right"></b-column>
+				<b-column :header="['Lines', 'Comment']" value="lines.comment" class="text-right"></b-column>
+				<b-column :header="['Lines', 'Empty']" value="lines.empty" class="text-right"></b-column>
+				<b-column header="Files" value="files" class="text-right"></b-column>
+				<b-column header="Languages" value="languages" class="text-right"></b-column>
+				<b-column :header="['Commits', 'Total']" value="commits.total" class="text-right"></b-column>
+				<b-column :header="['Commits', 'First']" value="commits.start" class="text-right"></b-column>
+				<b-column :header="['Commits', 'Last']" value="commits.end" class="text-right"></b-column>
 			</b-datatable>
 		</b-tab>
 		<b-tab title="Months">
-			<b-datatable colspan="12" :data="tableMonths">
+			<b-datatable colspan="12" :model="tableMonths">
 				<b-column header="Month" width="20%" :render="renderName"></b-column>
-				<b-column :header="['Lines', 'Total']" data="lines.total" class="text-right"></b-column>
-				<b-column :header="['Lines', '%']" data="lines.percent" class="text-right"></b-column>
-				<b-column :header="['Lines', 'Code']" data="lines.code" class="text-right"></b-column>
-				<b-column :header="['Lines', 'Comment']" data="lines.comment" class="text-right"></b-column>
-				<b-column :header="['Lines', 'Empty']" data="lines.empty" class="text-right"></b-column>
-				<b-column header="Files" data="files" class="text-right"></b-column>
-				<b-column header="Languages" data="languages" class="text-right"></b-column>
-				<b-column header="Commits" data="commits.total" class="text-right"></b-column>
-				<b-column header="Authors" data="authors" class="text-right"></b-column>
+				<b-column :header="['Lines', 'Total']" value="lines.total" class="text-right"></b-column>
+				<b-column :header="['Lines', '%']" value="lines.percent" class="text-right"></b-column>
+				<b-column :header="['Lines', 'Code']" value="lines.code" class="text-right"></b-column>
+				<b-column :header="['Lines', 'Comment']" value="lines.comment" class="text-right"></b-column>
+				<b-column :header="['Lines', 'Empty']" value="lines.empty" class="text-right"></b-column>
+				<b-column header="Files" value="files" class="text-right"></b-column>
+				<b-column header="Languages" value="languages" class="text-right"></b-column>
+				<b-column header="Commits" value="commits.total" class="text-right"></b-column>
+				<b-column header="Authors" value="authors" class="text-right"></b-column>
 			</b-datatable>
 		</b-tab>
 		<b-tab title="Languages">
-			<b-datatable colspan="12" :data="tableLanguages">
+			<b-datatable colspan="12" :model="tableLanguages">
 				<b-column header="Language" width="20%" :render="renderName"></b-column>
-				<b-column :header="['Lines', 'Total']" data="lines.total" class="text-right"></b-column>
-				<b-column :header="['Lines', '%']" data="lines.percent" class="text-right"></b-column>
-				<b-column :header="['Lines', 'Code']" data="lines.code" class="text-right"></b-column>
-				<b-column :header="['Lines', 'Comment']" data="lines.comment" class="text-right"></b-column>
-				<b-column :header="['Lines', 'Empty']" data="lines.empty" class="text-right"></b-column>
-				<b-column header="Files" data="files" class="text-right"></b-column>
-				<b-column :header="['Commits', 'Total']" data="commits.total" class="text-right"></b-column>
-				<b-column :header="['Commits', 'First']" data="commits.start" class="text-right"></b-column>
-				<b-column :header="['Commits', 'Last']" data="commits.end" class="text-right"></b-column>
-				<b-column header="Authors" data="authors" class="text-right"></b-column>
+				<b-column :header="['Lines', 'Total']" value="lines.total" class="text-right"></b-column>
+				<b-column :header="['Lines', '%']" value="lines.percent" class="text-right"></b-column>
+				<b-column :header="['Lines', 'Code']" value="lines.code" class="text-right"></b-column>
+				<b-column :header="['Lines', 'Comment']" value="lines.comment" class="text-right"></b-column>
+				<b-column :header="['Lines', 'Empty']" value="lines.empty" class="text-right"></b-column>
+				<b-column header="Files" value="files" class="text-right"></b-column>
+				<b-column :header="['Commits', 'Total']" value="commits.total" class="text-right"></b-column>
+				<b-column :header="['Commits', 'First']" value="commits.start" class="text-right"></b-column>
+				<b-column :header="['Commits', 'Last']" value="commits.end" class="text-right"></b-column>
+				<b-column header="Authors" value="authors" class="text-right"></b-column>
 			</b-datatable>
 		</b-tab>
 		<b-tab title="Files">
-			<b-datatable colspan="12" :data="tableFiles">
+			<b-datatable colspan="12" :model="tableFiles">
 				<b-column header="File" width="20%" :render="renderName"></b-column>
-				<b-column :header="['Lines', 'Total']" data="lines.total" class="text-right"></b-column>
-				<b-column :header="['Lines', '%']" data="lines.percent" class="text-right"></b-column>
-				<b-column :header="['Lines', 'Code']" data="lines.code" class="text-right"></b-column>
-				<b-column :header="['Lines', 'Comment']" data="lines.comment" class="text-right"></b-column>
-				<b-column :header="['Lines', 'Empty']" data="lines.empty" class="text-right"></b-column>
-				<b-column :header="['Commits', 'Total']" data="commits.total" class="text-right"></b-column>
-				<b-column :header="['Commits', 'First']" data="commits.start" class="text-right"></b-column>
-				<b-column :header="['Commits', 'Last']" data="commits.end" class="text-right"></b-column>
-				<b-column header="Authors" data="authors" class="text-right"></b-column>
+				<b-column :header="['Lines', 'Total']" value="lines.total" class="text-right"></b-column>
+				<b-column :header="['Lines', '%']" value="lines.percent" class="text-right"></b-column>
+				<b-column :header="['Lines', 'Code']" value="lines.code" class="text-right"></b-column>
+				<b-column :header="['Lines', 'Comment']" value="lines.comment" class="text-right"></b-column>
+				<b-column :header="['Lines', 'Empty']" value="lines.empty" class="text-right"></b-column>
+				<b-column :header="['Commits', 'Total']" value="commits.total" class="text-right"></b-column>
+				<b-column :header="['Commits', 'First']" value="commits.start" class="text-right"></b-column>
+				<b-column :header="['Commits', 'Last']" value="commits.end" class="text-right"></b-column>
+				<b-column header="Authors" value="authors" class="text-right"></b-column>
 			</b-datatable>
 		</b-tab>
 	</b-tabs>

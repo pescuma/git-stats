@@ -1,12 +1,12 @@
 <script>
-
+	
 	module.exports = {
 		props: {
 			header: {
 				required: true
 			},
 			width: String,
-			data: String,
+			value: String,
 			class: String,
 			render: Function
 		},

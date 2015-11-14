@@ -23,7 +23,7 @@
 			};
 		},
 		props: {
-			data: Array
+			model: Array
 		},
 		methods: {
 			_registerColumn: function (col) {
@@ -89,7 +89,7 @@
 			},
 			_createColumnConfig: function (col) {
 				var result = {
-					data: col.data || null
+					data: col.value || null
 				};
 
 				if (col.class)
@@ -122,7 +122,7 @@
 						searching: false,
 						lengthChange: false,
 						autoWidth: false,
-						data: self.data,
+						data: self.model,
 						columns: cols
 					});
 				})
@@ -137,7 +137,7 @@
 			this.internal_datatable = undefined;
 		},
 		watch: {
-			data: function (val, oldVal) {
+			model: function (val, oldVal) {
 				this._updateDataTable();
 			},
 		}
