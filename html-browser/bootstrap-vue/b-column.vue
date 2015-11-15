@@ -6,7 +6,7 @@
 				required: true
 			},
 			width: String,
-			value: String,
+			field: String,
 			class: String,
 			render: Function
 		},

@@ -1,14 +1,11 @@
-<!--suppress ALL -->
 <template>
 	<b-col-sm :cols="colspan">
-		<table v-el:table class="table table-striped table-bordered table-hover" cellspacing="0" width="100%">
-			<tr v-for="hr in headers">
-				<th v-for="h in hr" rowspan="{{ h.rowspan }}" colspan="{{ h.colspan }}" width="{{ h.width }}">{{ h.title
-					}}
-				</th>
+		<table v-el:table class="table table-striped table-bordered table-hover" :style="tableStyle" cellspacing="0" width="100%">
+			<tr v-for="hr in headers" :style="thStyle">
+				<th v-for="h in hr" rowspan="{{ h.rowspan }}" colspan="{{ h.colspan }}" width="{{ h.width }}">{{ h.title }}</th>
 			</tr>
-			<tr v-for="line in rows">
-				<td v-for="r in line">{{{ r }}}</td>
+			<tr v-for="line in rows" :style="trStyle">
+				<td v-for="r in line" class="{{ r.class }}">{{{ r.value }}}</td>
 			</tr>
 		</table>
 	</b-col-sm>
@@ -19,6 +16,19 @@
 	
 	var Vue = require('vue')
 	
+	function addTitleToWrapedElement() {
+		var $el = $(this);
+		var title = $el.attr('title');
+		if (!title) {
+			if (this.offsetWidth < this.scrollWidth)
+				$el.attr('title', $el.text());
+		}
+		else {
+			if (this.offsetWidth >= this.scrollWidth && title == $el.text())
+				$el.removeAttr('title');
+		}
+	}
+	
 	module.exports = {
 		mixins: [require('./mixin-colspan.js')],
 		data: function () {
@@ -27,7 +37,7 @@
 			};
 		},
 		props: {
-			data: Array,
+			model: Array,
 			pageSize: {
 				type: Number,
 				default: 10
@@ -35,9 +45,51 @@
 			pageIndex: {
 				type: Number,
 				default: 0
+			},
+			orderBy: Number,
+			orderAsc: {
+				type: Boolean,
+				default: true
+			},
+			wrapLines: {
+				type: Boolean,
+				default: false
 			}
 		},
 		computed: {
+			tableStyle: function () {
+				var result = {};
+				
+				if (!this.wrapLines)
+					result['table-layout'] = 'fixed';
+				
+				return result;
+			},
+			thStyle: function () {
+				var result = {
+					'text-align': 'center',
+					'vertical-align': 'top !important',
+				};
+				
+				if (!this.wrapLines) {
+					result['white-space'] = 'nowrap';
+					result['overflow'] = 'hidden';
+					result['text-overflow'] = 'ellipsis';
+				}
+				
+				return result;
+			},
+			trStyle: function () {
+				var result = {};
+				
+				if (!this.wrapLines) {
+					result['white-space'] = 'nowrap';
+					result['overflow'] = 'hidden';
+					result['text-overflow'] = 'ellipsis';
+				}
+				
+				return result;
+			},
 			headers: function () {
 				var result = [];
 				
@@ -90,24 +142,52 @@
 				
 				return result;
 			},
+			sortedData: function () {
+				var result = this.model.slice();
+				
+				if (this.orderBy) {
+					var field = this.orderBy;
+					var asc = this.orderAsc;
+					
+					result.sort(function (a, b) {
+						var va = a[field];
+						var vb = b[field];
+						
+						if (va.last_nom < vb.last_nom)
+							return asc ? -1 : 1;
+						
+						if (va.last_nom > vb.last_nom)
+							return asc ? 1 : -1;
+						
+						return 0;
+					});
+				}
+				
+				return result;
+			},
 			rows: function () {
 				var result = [];
 				
-				var start = Math.min(Math.max(this.pageSize * this.pageIndex, 0), this.data.length);
-				var end = Math.min(Math.max(this.pageSize * (this.pageIndex + 1), start), this.data.length);
+				var data = this.sortedData;
+				
+				var start = Math.min(Math.max(this.pageSize * this.pageIndex, 0), data.length);
+				var end = Math.min(Math.max(this.pageSize * (this.pageIndex + 1), start), data.length);
 				
 				for (var i = start; i < end; ++i) {
 					var line = [];
 					for (var j = 0; j < this.internal_columns.length; ++j) {
 						var col = this.internal_columns[j];
-						var val = this.data[i][col.data];
+						var val = data[i][col.field];
 						
 						if (col.render)
 							val = col.render(val);
 						else
 							val = result.push(this.htmlEncode(val));
 						
-						line.push(val);
+						line.push({
+							value: val,
+							class: col.class
+						});
 					}
 					result.push(line);
 				}
@@ -126,6 +206,16 @@
 						   .replace('<', '&lt;')
 						   .replace('>', '&gt;');
 			}
+		},
+		attached: function () {
+			if (this.wrapLines) {
+				$(this.$el)
+						.on('mouseenter', 'th,td', addTitleToWrapedElement);
+			}
+		},
+		detached: function () {
+			$(this.$el)
+					.off('mouseenter', 'th,td', addTitleToWrapedElement);
 		},
 	};
 

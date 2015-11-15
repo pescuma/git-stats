@@ -89,7 +89,7 @@
 			},
 			_createColumnConfig: function (col) {
 				var result = {
-					data: col.value || null
+					data: col.field || null
 				};
 
 				if (col.class)

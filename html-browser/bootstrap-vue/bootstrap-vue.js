@@ -6,3 +6,4 @@ Vue.component('b-tabs', require('./b-tabs.vue'));
 Vue.component('b-tab', require('./b-tab.vue'));
 Vue.component('b-datatable', require('./b-datatable.vue'));
 Vue.component('b-column', require('./b-column.vue'));
+Vue.component('b-grid', require('./b-grid.vue'));
