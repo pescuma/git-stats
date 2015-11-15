@@ -1,15 +1,19 @@
 <template>
 	<b-col-sm :cols="colspan">
-		<table v-el:table class="table table-striped table-bordered table-hover" :style="tableStyle" cellspacing="0" width="100%">
-			<tr v-for="hr in headers" :style="thStyle">
-				<th v-for="h in hr" rowspan="{{ h.rowspan }}" colspan="{{ h.colspan }}" width="{{ h.width }}">{{ h.title }}</th>
+		<table v-el:table :class="tableClass" :style="tableStyle" cellspacing="0" width="100%">
+			<thead>
+			<tr v-for="hr in headers">
+				<th v-for="h in hr" rowspan="{{ h.rowspan }}" colspan="{{ h.colspan }}" width="{{ h.width }}" :style="thStyle">{{ h.title }}</th>
 			</tr>
-			<tr v-for="line in rows" :style="trStyle">
-				<td v-for="r in line" class="{{ r.class }}">{{{ r.value }}}</td>
+			</thead>
+			<tbody>
+			<tr v-for="line in rows">
+				<td v-for="r in line" class="{{ r.class }}" :style="trStyle">{{{ r.value }}}</td>
 			</tr>
+			</tbody>
 		</table>
+		<slot></slot>
 	</b-col-sm>
-	<slot></slot>
 </template>
 
 <script>
@@ -19,12 +23,14 @@
 	function addTitleToWrapedElement() {
 		var $el = $(this);
 		var title = $el.attr('title');
-		if (!title) {
-			if (this.offsetWidth < this.scrollWidth)
-				$el.attr('title', $el.text());
-		}
-		else {
-			if (this.offsetWidth >= this.scrollWidth && title == $el.text())
+		var needs = (this.scrollWidth > this.clientWidth);
+		if (needs) {
+			if (!title)
+				$el.attr('title', $el.text()
+									 .trim());
+		} else {
+			if (title == $el.text()
+							.trim())
 				$el.removeAttr('title');
 		}
 	}
@@ -39,31 +45,48 @@
 		props: {
 			model: Array,
 			pageSize: {
-				type: Number,
-				default: 10
+				default: null
 			},
 			pageIndex: {
-				type: Number,
 				default: 0
 			},
-			orderBy: Number,
+			orderBy: String,
 			orderAsc: {
-				type: Boolean,
 				default: true
 			},
 			wrapLines: {
-				type: Boolean,
 				default: false
-			}
+			},
+			striped: {
+				default: true
+			},
+			bordered: {
+				default: true
+			},
+			hover: {
+				default: true
+			},
+			condensed: {
+				default: false
+			},
 		},
 		computed: {
 			tableStyle: function () {
 				var result = {};
 				
-				if (!this.wrapLines)
+				if (this.wrapLines != 'true')
 					result['table-layout'] = 'fixed';
 				
 				return result;
+			},
+			tableClass: function () {
+				return {
+					'table': true,
+					'table-striped': this.striped == 'true',
+					'table-bordered': this.bordered == 'true',
+					'table-hover': this.hover == 'true',
+					'table-condensed': this.condensed == 'true'
+				};
 			},
 			thStyle: function () {
 				var result = {
@@ -71,7 +94,7 @@
 					'vertical-align': 'top !important',
 				};
 				
-				if (!this.wrapLines) {
+				if (this.wrapLines != 'true') {
 					result['white-space'] = 'nowrap';
 					result['overflow'] = 'hidden';
 					result['text-overflow'] = 'ellipsis';
@@ -82,7 +105,7 @@
 			trStyle: function () {
 				var result = {};
 				
-				if (!this.wrapLines) {
+				if (this.wrapLines != 'true') {
 					result['white-space'] = 'nowrap';
 					result['overflow'] = 'hidden';
 					result['text-overflow'] = 'ellipsis';
@@ -136,6 +159,7 @@
 							if (col.width)
 								header.width = col.width;
 							header.rowspan = maxDepth - j;
+							header.last = true;
 						}
 					}
 				}
@@ -147,7 +171,7 @@
 				
 				if (this.orderBy) {
 					var field = this.orderBy;
-					var asc = this.orderAsc;
+					var asc = this.orderAsc == 'true';
 					
 					result.sort(function (a, b) {
 						var va = a[field];
@@ -170,19 +194,29 @@
 				
 				var data = this.sortedData;
 				
-				var start = Math.min(Math.max(this.pageSize * this.pageIndex, 0), data.length);
-				var end = Math.min(Math.max(this.pageSize * (this.pageIndex + 1), start), data.length);
+				var pi = parseInt(this.pageIndex);
+				var ps = parseInt(this.pageSize);
+				
+				var start, end;
+				if (this.pageSize) {
+					start = Math.min(Math.max(ps * pi, 0), data.length);
+					end = Math.min(start + ps, data.length);
+				} else {
+					start = 0;
+					end = data.length;
+				}
 				
 				for (var i = start; i < end; ++i) {
 					var line = [];
+					var dataLine = data[i];
 					for (var j = 0; j < this.internal_columns.length; ++j) {
 						var col = this.internal_columns[j];
-						var val = data[i][col.field];
+						var val;
 						
 						if (col.render)
-							val = col.render(val);
-						else
-							val = result.push(this.htmlEncode(val));
+							val = col.render(dataLine); else if (col.field)
+							val = this.htmlEncode(this.getProperty(dataLine, col.field)); else
+							val = '';
 						
 						line.push({
 							value: val,
@@ -200,21 +234,41 @@
 				this.internal_columns.push(col);
 			},
 			htmlEncode: function (str) {
-				return html.replace('&', '&amp;')
-						   .replace('"', '&quot;')
-						   .replace("'", '&#39;')
-						   .replace('<', '&lt;')
-						   .replace('>', '&gt;');
+				if (str === undefined || str === null)
+					str = '';
+				
+				return str.toString()
+						  .replace('&', '&amp;')
+						  .replace('"', '&quot;')
+						  .replace("'", '&#39;')
+						  .replace('<', '&lt;')
+						  .replace('>', '&gt;');
+			},
+			getProperty: function (obj, prop) {
+				prop = prop.replace(/\[(\w+)\]/g, '.$1'); // convert indexes to properties
+				prop = prop.replace(/^\./, '');           // strip a leading dot
+				var a = prop.split('.');
+				for (var i = 0, n = a.length; i < n; ++i) {
+					var k = a[i];
+					if (k in obj)
+						obj = obj[k]; else
+						return null;
+				}
+				return obj;
 			}
 		},
 		attached: function () {
-			if (this.wrapLines) {
-				$(this.$el)
-						.on('mouseenter', 'th,td', addTitleToWrapedElement);
+			if (this.wrapLines != 'true') {
+				var self = this;
+				
+				Vue.nextTick(function () {
+					$(self.$els.table)
+							.on('mouseenter', 'th,td', addTitleToWrapedElement);
+				});
 			}
 		},
 		detached: function () {
-			$(this.$el)
+			$(this.$els.table)
 					.off('mouseenter', 'th,td', addTitleToWrapedElement);
 		},
 	};
