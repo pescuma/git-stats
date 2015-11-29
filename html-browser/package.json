@@ -6,7 +6,7 @@
 	"main": "index.js",
 	"scripts": {
 		"dev": "webpack-dev-server --inline --hot",
-		"build": "set NODE_ENV=production && webpack --progress --hide-modules && node ../../inliner/cli/index.js -vm vue.html > build/index.html"
+		"build": "set NODE_ENV=production && webpack --progress --hide-modules && inliner -vm vue.html > build/index.html"
 	},
 	"dependencies": {
 		"vue": "^1.0.0",
@@ -26,7 +26,7 @@
 		"vue-loader": "^6.0.0",
 		"webpack": "^1.12.2",
 		"webpack-dev-server": "^1.12.0",
-		"inliner": "^1.4.0"
+		"inliner": "^1.6.1"
 	},
 	"author": "Ricardo Pescuma Domenecci",
 	"license": "MIT",
