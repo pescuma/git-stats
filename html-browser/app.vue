@@ -488,7 +488,10 @@
 			formatLanguage: formatLanguage,
 			renderName: function (row) {
 				if (row.color)
-					return "<span style='background-color: " + row.color + "; width: 15px; height: 15px; float: left; border: 1px solid #aaa; margin-right: 4px;'></span> " + htmlEscape(row.name); else
+					return "<span style='background-color: " + row.color
+							+ "; width: 15px; height: 15px; float: left; border: 1px solid #aaa; margin-right: 4px;'></span> "
+							+ htmlEscape(row.name);
+				else
 					return htmlEscape(row.name);
 			}
 		}

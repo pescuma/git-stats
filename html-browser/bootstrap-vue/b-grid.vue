@@ -1,9 +1,43 @@
+<style>
+	table.table thead tr th.order {
+		position: relative;
+		padding-right: 20px;
+	}
+	
+	table.table thead tr th.order-desc:after {
+		opacity: 1;
+		content: "\e252";
+	}
+	
+	table.table thead tr th.order-asc:after {
+		opacity: 1;
+		content: "\e253";
+	}
+	
+	table.table thead tr th.order-no:after {
+		opacity: 0.4;
+		content: "\e252";
+	}
+	
+	table.table thead tr th.order:after {
+		font-family: "Glyphicons Halflings";
+		font-size: 10px;
+		position: absolute;
+		top: 8px;
+		right: 5px;
+		display: block;
+		box-sizing: border-box;
+	}
+</style>
+
 <template>
 	<b-col-sm :cols="colspan">
 		<table v-el:table :class="tableClass" :style="tableStyle" cellspacing="0" width="100%">
 			<thead>
 			<tr v-for="hr in headers">
-				<th v-for="h in hr" rowspan="{{ h.rowspan }}" colspan="{{ h.colspan }}" width="{{ h.width }}" :style="thStyle">{{ h.title }}</th>
+				<th v-for="h in hr" rowspan="{{ h.rowspan }}" colspan="{{ h.colspan }}" width="{{ h.width }}" :style="thStyle"
+					:class="{ 'order': h.order, 'order-no': h.order && h.field != orderBy }">{{ h.title }}
+				</th>
 			</tr>
 			</thead>
 			<tbody>
@@ -12,6 +46,13 @@
 			</tr>
 			</tbody>
 		</table>
+		<nav v-if="pagingItems">
+			<ul class="pagination">
+				<li :class="{ disabled: pageIndex == 0 }"><a @click="pageIndex = Math.max(pageIndex - 1, 0)">&laquo;</a></li>
+				<li v-for="i in pagingItems" :class="{ active: pageIndex == i.val }"><a @click="pageIndex = i.val">{{ i.name }}</a></li>
+				<li :class="{ disabled: pageIndex == lastPage }"><a @click="pageIndex = Math.min(pageIndex + 1, lastPage)">&raquo;</a></li>
+			</ul>
+		</nav>
 		<slot></slot>
 	</b-col-sm>
 </template>
@@ -25,13 +66,15 @@
 		var title = $el.attr('title');
 		var needs = (this.scrollWidth > this.clientWidth);
 		if (needs) {
-			if (!title)
+			if (!title) {
 				$el.attr('title', $el.text()
 									 .trim());
+			}
 		} else {
 			if (title == $el.text()
-							.trim())
+							.trim()) {
 				$el.removeAttr('title');
+			}
 		}
 	}
 	
@@ -71,14 +114,6 @@
 			},
 		},
 		computed: {
-			tableStyle: function () {
-				var result = {};
-				
-				if (this.wrapLines != 'true')
-					result['table-layout'] = 'fixed';
-				
-				return result;
-			},
 			tableClass: function () {
 				return {
 					'table': true,
@@ -87,6 +122,15 @@
 					'table-hover': this.hover == 'true',
 					'table-condensed': this.condensed == 'true'
 				};
+			},
+			tableStyle: function () {
+				var result = {};
+				
+				if (this.wrapLines != 'true') {
+					result['table-layout'] = 'fixed';
+				}
+				
+				return result;
 			},
 			thStyle: function () {
 				var result = {
@@ -119,24 +163,27 @@
 				var maxDepth = 1;
 				for (var i = 0; i < this.internal_columns.length; ++i) {
 					var col = this.internal_columns[i];
-					if (typeof col.header != 'string')
+					if (typeof col.header != 'string') {
 						maxDepth = Math.max(maxDepth, col.header.length);
+					}
 				}
 				
 				for (var i = 0; i < this.internal_columns.length; ++i) {
 					var col = this.internal_columns[i];
 					
 					var titles = col.header;
-					if (typeof titles == 'string')
+					if (typeof titles == 'string') {
 						titles = [titles];
+					}
 					
 					var insideNew = false;
 					
 					for (var j = 0; j < titles.length; ++j) {
 						var title = titles[j];
 						
-						if (result.length <= j)
+						if (result.length <= j) {
 							result[j] = [];
+						}
 						
 						var headerLine = result[j];
 						var header = headerLine[headerLine.length - 1] || {};
@@ -156,10 +203,11 @@
 						header.colspan++;
 						
 						if (j == titles.length - 1) {
-							if (col.width)
+							if (col.width) {
 								header.width = col.width;
+							}
 							header.rowspan = maxDepth - j;
-							header.last = true;
+							header.order = !!col.field;
 						}
 					}
 				}
@@ -177,11 +225,13 @@
 						var va = a[field];
 						var vb = b[field];
 						
-						if (va.last_nom < vb.last_nom)
+						if (va.last_nom < vb.last_nom) {
 							return asc ? -1 : 1;
+						}
 						
-						if (va.last_nom > vb.last_nom)
+						if (va.last_nom > vb.last_nom) {
 							return asc ? 1 : -1;
+						}
 						
 						return 0;
 					});
@@ -213,10 +263,13 @@
 						var col = this.internal_columns[j];
 						var val;
 						
-						if (col.render)
-							val = col.render(dataLine); else if (col.field)
-							val = this.htmlEncode(this.getProperty(dataLine, col.field)); else
+						if (col.render) {
+							val = col.render(dataLine);
+						} else if (col.field) {
+							val = this.htmlEncode(this.getProperty(dataLine, col.field));
+						} else {
 							val = '';
+						}
 						
 						line.push({
 							value: val,
@@ -226,6 +279,44 @@
 					result.push(line);
 				}
 				
+				return result;
+			},
+			lastPage: function () {
+				if (!this.pageSize) {
+					return 0;
+				}
+				
+				if (!this.model.length) {
+					return 0;
+				}
+				
+				return Math.floor((this.model.length - 1) / this.pageSize);
+			},
+			pagingItems: function () {
+				if (!this.pageSize) {
+					return null;
+				}
+				
+				if (!this.model.length) {
+					return null;
+				}
+				
+				var borders = 2;
+				
+				var min = Math.max(this.pageIndex - borders, 0);
+				var max = Math.min(min + 2 * borders, this.lastPage);
+				min = Math.max(max - 2 * borders, 0);
+				
+				if (min == max) {
+					return null;
+				}
+				
+				var result = [];
+				for (var i = min; i <= max; ++i)
+					result.push({
+						name: i + 1,
+						val: i
+					});
 				return result;
 			}
 		},
