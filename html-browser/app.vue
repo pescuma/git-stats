@@ -18,7 +18,7 @@
 
 	<b-tabs>
 		<b-tab title="Authors">
-			<b-datatable colspan="12" :model="tableAuthors">
+			<b-grid page-size="10" bordered="true" striped="true" hover="true" condensed="true" colspan="12" :model="tableAuthors">
 				<b-column header="Author" width="20%" :render="renderName"></b-column>
 				<b-column :header="['Lines', 'Total']" field="lines.total" class="text-right"></b-column>
 				<b-column :header="['Lines', '%']" field="lines.percent" class="text-right"></b-column>
@@ -30,10 +30,10 @@
 				<b-column :header="['Commits', 'Total']" field="commits.total" class="text-right"></b-column>
 				<b-column :header="['Commits', 'First']" field="commits.start" class="text-right"></b-column>
 				<b-column :header="['Commits', 'Last']" field="commits.end" class="text-right"></b-column>
-			</b-datatable>
+			</b-grid>
 		</b-tab>
 		<b-tab title="Months">
-			<b-datatable colspan="12" :model="tableMonths">
+			<b-grid page-size="10" bordered="true" striped="true" hover="true" condensed="true" colspan="12" :model="tableMonths">
 				<b-column header="Month" width="20%" :render="renderName"></b-column>
 				<b-column :header="['Lines', 'Total']" field="lines.total" class="text-right"></b-column>
 				<b-column :header="['Lines', '%']" field="lines.percent" class="text-right"></b-column>
@@ -44,10 +44,10 @@
 				<b-column header="Languages" field="languages" class="text-right"></b-column>
 				<b-column header="Commits" field="commits.total" class="text-right"></b-column>
 				<b-column header="Authors" field="authors" class="text-right"></b-column>
-			</b-datatable>
+			</b-grid>
 		</b-tab>
 		<b-tab title="Languages">
-			<b-datatable colspan="12" :model="tableLanguages">
+			<b-grid page-size="10" bordered="true" striped="true" hover="true" condensed="true" colspan="12" :model="tableLanguages">
 				<b-column header="Language" width="20%" :render="renderName"></b-column>
 				<b-column :header="['Lines', 'Total']" field="lines.total" class="text-right"></b-column>
 				<b-column :header="['Lines', '%']" field="lines.percent" class="text-right"></b-column>
@@ -59,10 +59,10 @@
 				<b-column :header="['Commits', 'First']" field="commits.start" class="text-right"></b-column>
 				<b-column :header="['Commits', 'Last']" field="commits.end" class="text-right"></b-column>
 				<b-column header="Authors" field="authors" class="text-right"></b-column>
-			</b-datatable>
+			</b-grid>
 		</b-tab>
 		<b-tab title="Files">
-			<b-datatable colspan="12" :model="tableFiles">
+			<b-grid page-size="10" bordered="true" striped="true" hover="true" condensed="true" colspan="12" :model="tableFiles">
 				<b-column header="File" width="20%" :render="renderName"></b-column>
 				<b-column :header="['Lines', 'Total']" field="lines.total" class="text-right"></b-column>
 				<b-column :header="['Lines', '%']" field="lines.percent" class="text-right"></b-column>
@@ -73,7 +73,7 @@
 				<b-column :header="['Commits', 'First']" field="commits.start" class="text-right"></b-column>
 				<b-column :header="['Commits', 'Last']" field="commits.end" class="text-right"></b-column>
 				<b-column header="Authors" field="authors" class="text-right"></b-column>
-			</b-datatable>
+			</b-grid>
 		</b-tab>
 	</b-tabs>
 </template>
@@ -106,18 +106,6 @@
 		$('select').select2({
 			placeholder: "All",
 			allowClear: true
-		});
-
-		$(document).on('mouseenter', 'th,td', function () {
-			var $el = $(this);
-			var title = $el.attr('title');
-			if (!title) {
-				if (this.offsetWidth < this.scrollWidth)
-					$el.attr('title', $el.text());
-			} else {
-				if (this.offsetWidth >= this.scrollWidth && title == $el.text())
-					$el.removeAttr('title');
-			}
 		});
 	});
 
