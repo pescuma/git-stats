@@ -62,6 +62,7 @@
 	var Vue = require('vue');
 	var expr = require('property-expr');
 	var he = require('he');
+	var Type = require('type-of-is');
 
 	function _htmlEncode(txt) {
 		if (txt === undefined || txt === null)
@@ -179,7 +180,7 @@
 				var maxDepth = 1;
 				for (var i = 0; i < this.internal_columns.length; ++i) {
 					var col = this.internal_columns[i];
-					if (typeof col.header != 'string') {
+					if (Type.is(col.header, String)) {
 						maxDepth = Math.max(maxDepth, col.header.length);
 					}
 				}
@@ -188,7 +189,7 @@
 					var col = this.internal_columns[i];
 
 					var titles = col.header;
-					if (typeof titles == 'string') {
+					if (!Type.is(titles, Array)) {
 						titles = [titles];
 					}
 
@@ -234,19 +235,19 @@
 			sortedData: function () {
 				var result = this.model;
 
-				if (typeof this.orderBy == 'number' && this.internal_columns.length) {
+				if (Type.is(this.orderBy, Number) && this.internal_columns.length) {
 					var sortCol = this.internal_columns[this.orderBy];
 					if (!sortCol)
 						return result;
-					
+
 					var getter;
-					if (typeof sortCol.order == 'string') {
+					if (Type.is(sortCol.order, String)) {
 						getter = expr.getter(sortCol.order);
-					} else if (typeof sortCol.order == 'function') {
+					} else if (Type.is(sortCol.order, Function)) {
 						getter = sortCol.order;
-					} else if (typeof sortCol.render == 'string') {
+					} else if (Type.is(sortCol.render, String)) {
 						getter = expr.getter(sortCol.render);
-					} else if (typeof sortCol.render == 'function') {
+					} else if (Type.is(sortCol.render, Function)) {
 						getter = sortCol.render;
 					} else {
 						throw 'Order column does not have order or render field';
@@ -296,14 +297,14 @@
 					var col = this.internal_columns[j];
 					var render;
 
-					if (typeof col.render == 'string') {
+					if (Type.is(col.render, String)) {
 						render = (function () {
 							var getter = expr.getter(col.render);
 							return function (obj) {
 								return _htmlEncode(getter(obj));
 							};
 						})();
-					} else if (typeof col.render == 'function') {
+					} else if (Type.is(col.render, Function)) {
 						render = col.render;
 					} else {
 						throw 'Column does not have render field';
