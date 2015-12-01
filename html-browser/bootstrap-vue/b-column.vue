@@ -6,9 +6,9 @@
 				required: true
 			},
 			width: String,
-			field: String,
 			class: String,
-			render: Function
+			render: {},
+			order: {}
 		},
 		created: function () {
 			this.$parent._registerColumn(this);

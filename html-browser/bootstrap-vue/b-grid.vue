@@ -2,6 +2,7 @@
 	table.table thead tr th.order {
 		position: relative;
 		padding-right: 20px;
+		cursor: pointer;
 	}
 
 	table.table thead tr th.order-desc:after {
@@ -36,8 +37,7 @@
 			<thead>
 			<tr v-for="hr in headers">
 				<th v-for="h in hr" rowspan="{{ h.rowspan }}" colspan="{{ h.colspan }}" width="{{ h.width }}" :style="thStyle"
-					:class="{ 'order': h.order, 'order-no': h.order && h.field != orderBy }">{{ h.title }}
-				</th>
+					:class="this._orderClass(h)" @click="_orderByTh(h)">{{ h.title }}</th>
 			</tr>
 			</thead>
 			<tbody>
@@ -47,7 +47,7 @@
 			</tbody>
 		</table>
 		<nav v-if="pagingItems">
-			<ul class="pagination">
+			<ul class="pagination" style="margin-top: 0">
 				<li :class="{ disabled: pageIndex == 0 }"><a @click="pageIndex = Math.max(pageIndex - 1, 0)">&laquo;</a></li>
 				<li v-for="i in pagingItems" :class="{ active: pageIndex == i.val }"><a @click="pageIndex = i.val">{{ i.name }}</a></li>
 				<li :class="{ disabled: pageIndex == lastPage }"><a @click="pageIndex = Math.min(pageIndex + 1, lastPage)">&raquo;</a></li>
@@ -59,7 +59,20 @@
 
 <script>
 
-	var Vue = require('vue')
+	var Vue = require('vue');
+	var expr = require('property-expr');
+	var he = require('he');
+
+	function _htmlEncode(txt) {
+		if (txt === undefined || txt === null)
+			return '';
+
+		return he.escape(txt.toString());
+	}
+
+	function _isTrue(v) {
+		return v === 'true' || v === true;
+	}
 
 	function _addTitleToWrapedElement() {
 		var $el = $(this);
@@ -93,9 +106,12 @@
 			pageIndex: {
 				default: 0
 			},
-			orderBy: String,
+			orderBy: {
+				type: Number,
+				default: 0
+			},
 			orderAsc: {
-				default: true
+				default: false
 			},
 			wrapLines: {
 				default: false
@@ -117,16 +133,16 @@
 			tableClass: function () {
 				return {
 					'table': true,
-					'table-striped': this.striped == 'true',
-					'table-bordered': this.bordered == 'true',
-					'table-hover': this.hover == 'true',
-					'table-condensed': this.condensed == 'true'
+					'table-striped': _isTrue(this.striped),
+					'table-bordered': _isTrue(this.bordered),
+					'table-hover': _isTrue(this.hover),
+					'table-condensed': _isTrue(this.condensed),
 				};
 			},
 			tableStyle: function () {
 				var result = {};
 
-				if (this.wrapLines != 'true') {
+				if (!_isTrue(this.wrapLines)) {
 					result['table-layout'] = 'fixed';
 				}
 
@@ -138,7 +154,7 @@
 					'vertical-align': 'top !important',
 				};
 
-				if (this.wrapLines != 'true') {
+				if (!_isTrue(this.wrapLines)) {
 					result['white-space'] = 'nowrap';
 					result['overflow'] = 'hidden';
 					result['text-overflow'] = 'ellipsis';
@@ -149,7 +165,7 @@
 			trStyle: function () {
 				var result = {};
 
-				if (this.wrapLines != 'true') {
+				if (!_isTrue(this.wrapLines)) {
 					result['white-space'] = 'nowrap';
 					result['overflow'] = 'hidden';
 					result['text-overflow'] = 'ellipsis';
@@ -207,7 +223,8 @@
 								header.width = col.width;
 							}
 							header.rowspan = maxDepth - j;
-							header.order = !!col.field;
+							header.order = true;
+							header.index = i;
 						}
 					}
 				}
@@ -215,21 +232,39 @@
 				return result;
 			},
 			sortedData: function () {
-				var result = this.model.slice();
+				var result = this.model;
 
-				if (this.orderBy) {
-					var field = this.orderBy;
-					var asc = this.orderAsc == 'true';
+				if (typeof this.orderBy == 'number' && this.internal_columns.length) {
+					var sortCol = this.internal_columns[this.orderBy];
+					if (!sortCol)
+						return result;
+					
+					var getter;
+					if (typeof sortCol.order == 'string') {
+						getter = expr.getter(sortCol.order);
+					} else if (typeof sortCol.order == 'function') {
+						getter = sortCol.order;
+					} else if (typeof sortCol.render == 'string') {
+						getter = expr.getter(sortCol.render);
+					} else if (typeof sortCol.render == 'function') {
+						getter = sortCol.render;
+					} else {
+						throw 'Order column does not have order or render field';
+					}
+
+					var asc = _isTrue(this.orderAsc);
+
+					result = result.slice();
 
 					result.sort(function (a, b) {
-						var va = a[field];
-						var vb = b[field];
+						var va = getter(a);
+						var vb = getter(b);
 
-						if (va.last_nom < vb.last_nom) {
+						if (va < vb) {
 							return asc ? -1 : 1;
 						}
 
-						if (va.last_nom > vb.last_nom) {
+						if (va > vb) {
 							return asc ? 1 : -1;
 						}
 
@@ -256,26 +291,38 @@
 					end = data.length;
 				}
 
+				var renders = [];
+				for (var j = 0; j < this.internal_columns.length; ++j) {
+					var col = this.internal_columns[j];
+					var render;
+
+					if (typeof col.render == 'string') {
+						render = (function () {
+							var getter = expr.getter(col.render);
+							return function (obj) {
+								return _htmlEncode(getter(obj));
+							};
+						})();
+					} else if (typeof col.render == 'function') {
+						render = col.render;
+					} else {
+						throw 'Column does not have render field';
+					}
+
+					renders.push(render);
+				}
+
 				for (var i = start; i < end; ++i) {
 					var line = [];
 					var dataLine = data[i];
+
 					for (var j = 0; j < this.internal_columns.length; ++j) {
-						var col = this.internal_columns[j];
-						var val;
-
-						if (col.render) {
-							val = col.render(dataLine);
-						} else if (col.field) {
-							val = this.htmlEncode(this.getProperty(dataLine, col.field));
-						} else {
-							val = '';
-						}
-
 						line.push({
-							value: val,
-							class: col.class
+							value: renders[j](dataLine),
+							class: this.internal_columns[j].class
 						});
 					}
+
 					result.push(line);
 				}
 
@@ -324,33 +371,28 @@
 			_registerColumn: function (col) {
 				this.internal_columns.push(col);
 			},
-			htmlEncode: function (str) {
-				if (str === undefined || str === null)
-					str = '';
-
-				return str.toString()
-						.replace('&', '&amp;')
-						.replace('"', '&quot;')
-						.replace("'", '&#39;')
-						.replace('<', '&lt;')
-						.replace('>', '&gt;');
+			_orderClass: function (th) {
+				return {
+					'order': th.order,
+					'order-no': th.order && th.index != this.orderBy,
+					'order-asc': th.order && th.index == this.orderBy && _isTrue(this.orderAsc),
+					'order-desc': th.order && th.index == this.orderBy && !_isTrue(this.orderAsc)
+				};
 			},
-			getProperty: function (obj, prop) {
-				prop = prop.replace(/\[(\w+)\]/g, '.$1'); // convert indexes to properties
-				prop = prop.replace(/^\./, '');           // strip a leading dot
-				var a = prop.split('.');
-				for (var i = 0, n = a.length; i < n; ++i) {
-					var k = a[i];
-					if (k in obj)
-						obj = obj[k];
-					else
-						return null;
+			_orderByTh: function (header) {
+				if (!header.order)
+					return;
+
+				if (this.orderBy == header.index) {
+					this.orderAsc = !_isTrue(this.orderAsc);
+				} else {
+					this.orderBy = header.index;
+					this.orderAsc = false;
 				}
-				return obj;
-			}
+			},
 		},
 		attached: function () {
-			if (this.wrapLines != 'true') {
+			if (!_isTrue(this.wrapLines)) {
 				var self = this;
 
 				Vue.nextTick(function () {
@@ -358,11 +400,14 @@
 							.on('mouseenter', 'th,td', _addTitleToWrapedElement);
 				});
 			}
-		},
+		}
+		,
 		detached: function () {
 			$(this.$els.table)
 					.off('mouseenter', 'th,td', _addTitleToWrapedElement);
-		},
-	};
+		}
+		,
+	}
+	;
 
 </script>
