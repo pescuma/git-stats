@@ -15,6 +15,7 @@
 	var _nexId = 0;
 
 	module.exports = {
+		tag: 'b-select2',
 		mixins: [require('./mixin-colspan.js')],
 		props: {
 			id: {

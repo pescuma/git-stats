@@ -6,6 +6,8 @@
 
 <script>
 
-	module.exports = {};
+	module.exports = {
+		tag: 'b-row'
+	};
 
 </script>

@@ -93,6 +93,7 @@
 	}
 
 	module.exports = {
+		tag: 'b-grid',
 		mixins: [require('./mixin-colspan.js')],
 		data: function () {
 			return {

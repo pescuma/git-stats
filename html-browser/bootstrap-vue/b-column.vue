@@ -1,6 +1,7 @@
 <script>
 	
 	module.exports = {
+		tag: 'b-column',
 		props: {
 			header: {
 				required: true

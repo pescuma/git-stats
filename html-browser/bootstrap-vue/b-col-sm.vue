@@ -8,6 +8,7 @@
 <script>
 
 	module.exports = {
+		tag: 'b-col-sm',
 		props: ['cols']
 	};
 

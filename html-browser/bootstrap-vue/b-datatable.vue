@@ -36,6 +36,7 @@
 	var Vue = require('vue')
 	
 	module.exports = {
+		tag: 'b-datatable',
 		mixins: [require('./mixin-colspan.js')],
 		data: function () {
 			return {
