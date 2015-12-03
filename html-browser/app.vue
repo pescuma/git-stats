@@ -4,14 +4,14 @@
 			<legend>Filters</legend>
 
 			<b-row>
-				<b-select2 label="Authors" colspan="4" multiple allow-clear empty-text="All" :options="authors" :format="formatAuthor"
-						   :selected.sync="selectedAuthors"></b-select2>
-				<b-select2 label="Languages" colspan="4" multiple allow-clear empty-text="All" :options="languages" :format="formatLanguage"
-						   :selected.sync="selectedLanguages"></b-select2>
+				<b-select2 label="Authors" colspan="4" multiple allow-clear empty-text="All" :options="authors" :render="formatAuthor"
+						   :model.sync="selectedAuthors"></b-select2>
+				<b-select2 label="Languages" colspan="4" multiple allow-clear empty-text="All" :options="languages" :render="formatLanguage"
+						   :model.sync="selectedLanguages"></b-select2>
 				<b-select2 label="First month" colspan="2" allow-clear empty-text="All" :options="months"
-						   :selected.sync="firstMonth"></b-select2>
+						   :model.sync="firstMonth"></b-select2>
 				<b-select2 label="Last month" colspan="2" allow-clear empty-text="All" :options="months"
-						   :selected.sync="lastMonth"></b-select2>
+						   :model.sync="lastMonth"></b-select2>
 			</b-row>
 		</fieldset>
 	</form>
