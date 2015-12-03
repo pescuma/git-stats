@@ -79,7 +79,7 @@
 </template>
 
 <script>
-	require('./bootstrap-vue/bootstrap-vue.js')
+	require('./vuejs-bootstrap/vuejs-bootstrap.js');
 
 	var COL_LANGUAGE = 0;
 	var COL_LINE_TYPE = 1;

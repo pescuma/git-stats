@@ -1,3 +1,6 @@
 [submodule "git-stats/build"]
 	path = git-stats/build
 	url = https://github.com/pescuma/java-build-utils.git
+[submodule "html-browser/vuejs-bootstrap"]
+	path = html-browser/vuejs-bootstrap
+	url = https://github.com/pescuma/vuejs-bootstrap.git
