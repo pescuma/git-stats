@@ -18,22 +18,41 @@
 
 	<b-tabs>
 		<b-tab title="Authors">
-			<b-grid page-size="10" bordered="true" striped="true" hover="true" condensed="true" colspan="12" :model="tableAuthors" :order-by="1">
-				<b-column header="Author" width="20%" :render="renderName" order="name"></b-column>
-				<b-column :header="['Lines', 'Total']" render="lines.total" class="text-right"></b-column>
-				<b-column :header="['Lines', '%']" render="lines.percent" class="text-right"></b-column>
-				<b-column :header="['Lines', 'Code']" render="lines.code" class="text-right"></b-column>
-				<b-column :header="['Lines', 'Comment']" render="lines.comment" class="text-right"></b-column>
-				<b-column :header="['Lines', 'Empty']" render="lines.empty" class="text-right"></b-column>
-				<b-column header="Files" render="files" class="text-right"></b-column>
-				<b-column header="Languages" render="languages" class="text-right"></b-column>
-				<b-column :header="['Commits', 'Total']" render="commits.total" class="text-right"></b-column>
-				<b-column :header="['Commits', 'First']" render="commits.start" class="text-right"></b-column>
-				<b-column :header="['Commits', 'Last']" render="commits.end" class="text-right"></b-column>
-			</b-grid>
+			<b-row>
+				<b-datatable colspan="12" :model="tableAuthors">
+					<b-column header="Author" width="20%" :render="renderName" order="name"></b-column>
+					<b-column :header="['Lines', 'Total']" render="lines.total" class="text-right"></b-column>
+					<b-column :header="['Lines', '%']" render="lines.percent" class="text-right"></b-column>
+					<b-column :header="['Lines', 'Code']" render="lines.code" class="text-right"></b-column>
+					<b-column :header="['Lines', 'Comment']" render="lines.comment" class="text-right"></b-column>
+					<b-column :header="['Lines', 'Empty']" render="lines.empty" class="text-right"></b-column>
+					<b-column header="Files" render="files" class="text-right"></b-column>
+					<b-column header="Languages" render="languages" class="text-right"></b-column>
+					<b-column :header="['Commits', 'Total']" render="commits.total" class="text-right"></b-column>
+					<b-column :header="['Commits', 'First']" render="commits.start" class="text-right"></b-column>
+					<b-column :header="['Commits', 'Last']" render="commits.end" class="text-right"></b-column>
+				</b-datatable>
+			</b-row>
+			<b-row>
+				<b-grid page-size="10" bordered="true" striped="true" hover="true" condensed="true" colspan="12" :model="tableAuthors"
+						:order-by="1">
+					<b-column header="Author" width="20%" :render="renderName" order="name"></b-column>
+					<b-column :header="['Lines', 'Total']" render="lines.total" class="text-right"></b-column>
+					<b-column :header="['Lines', '%']" render="lines.percent" class="text-right"></b-column>
+					<b-column :header="['Lines', 'Code']" render="lines.code" class="text-right"></b-column>
+					<b-column :header="['Lines', 'Comment']" render="lines.comment" class="text-right"></b-column>
+					<b-column :header="['Lines', 'Empty']" render="lines.empty" class="text-right"></b-column>
+					<b-column header="Files" render="files" class="text-right"></b-column>
+					<b-column header="Languages" render="languages" class="text-right"></b-column>
+					<b-column :header="['Commits', 'Total']" render="commits.total" class="text-right"></b-column>
+					<b-column :header="['Commits', 'First']" render="commits.start" class="text-right"></b-column>
+					<b-column :header="['Commits', 'Last']" render="commits.end" class="text-right"></b-column>
+				</b-grid>
+			</b-row>
 		</b-tab>
 		<b-tab title="Months">
-			<b-grid page-size="10" bordered="true" striped="true" hover="true" condensed="true" colspan="12" :model="tableMonths" :order-by="1">
+			<b-grid page-size="10" bordered="true" striped="true" hover="true" condensed="true" colspan="12" :model="tableMonths"
+					:order-by="1">
 				<b-column header="Month" width="20%" :render="renderName" order="name"></b-column>
 				<b-column :header="['Lines', 'Total']" render="lines.total" class="text-right"></b-column>
 				<b-column :header="['Lines', '%']" render="lines.percent" class="text-right"></b-column>
@@ -47,7 +66,8 @@
 			</b-grid>
 		</b-tab>
 		<b-tab title="Languages">
-			<b-grid page-size="10" bordered="true" striped="true" hover="true" condensed="true" colspan="12" :model="tableLanguages" :order-by="1">
+			<b-grid page-size="10" bordered="true" striped="true" hover="true" condensed="true" colspan="12" :model="tableLanguages"
+					:order-by="1">
 				<b-column header="Language" width="20%" :render="renderName" order="name"></b-column>
 				<b-column :header="['Lines', 'Total']" render="lines.total" class="text-right"></b-column>
 				<b-column :header="['Lines', '%']" render="lines.percent" class="text-right"></b-column>
@@ -62,7 +82,8 @@
 			</b-grid>
 		</b-tab>
 		<b-tab title="Files">
-			<b-grid page-size="10" bordered="true" striped="true" hover="true" condensed="true" colspan="12" :model="tableFiles" :order-by="1">
+			<b-grid page-size="10" bordered="true" striped="true" hover="true" condensed="true" colspan="12" :model="tableFiles"
+					:order-by="1">
 				<b-column header="File" width="20%" :render="renderName" order="name"></b-column>
 				<b-column :header="['Lines', 'Total']" render="lines.total" class="text-right"></b-column>
 				<b-column :header="['Lines', '%']" render="lines.percent" class="text-right"></b-column>
